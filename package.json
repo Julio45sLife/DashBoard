@@ -24,5 +24,9 @@
     "@typescript-eslint/parser": "^7.0.0",
     "concurrently": "^8.2.2",
     "eslint": "^8.57.0"
+  },
+  "dependencies": {
+    "@types/supertest": "^7.2.0",
+    "supertest": "^7.2.2"
   }
 }
