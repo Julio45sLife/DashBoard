@@ -8,6 +8,8 @@ dist/
 .next/
 out/
 build/
+*.tsbuildinfo
+apps/web/next-env.d.ts
 
 # Environment files (NEVER commit real .env)
 .env
