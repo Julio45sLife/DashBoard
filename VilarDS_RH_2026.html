@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1C2B3A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Vilar DS — RH & Équipe 2026</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <script src="vilar-core.js"></script>
+  <script src="ui-components.js"></script>
+  <style>
+    /* ── Planning grid ── */
+    .rh-planning-wrap { overflow-x:auto; }
+    .rh-pg-cell { background:#0D1B27; padding:6px 4px; font-size:9.5px; text-align:center; }
+    .rh-pg-cell.hdr     { background:#111E2D; color:var(--af); font-weight:600; font-size:8.5px; text-transform:uppercase; }
+    .rh-pg-cell.hdr-name{ text-align:left; padding-left:10px; }
+    .rh-pg-cell.name    { text-align:left; font-weight:600; font-size:11.5px; padding-left:10px; }
+    .rh-pg-cell.travail  { background:rgba(74,123,168,.2);   color:var(--bc);  }
+    .rh-pg-cell.conge    { background:rgba(234,179,8,.15);   color:var(--jn);  }
+    .rh-pg-cell.rtt      { background:rgba(167,139,250,.15); color:#A78BFA;    }
+    .rh-pg-cell.maladie  { background:rgba(248,113,113,.15); color:var(--rll); }
+    .rh-pg-cell.formation{ background:rgba(200,168,75,.15);  color:var(--or);  }
+    .rh-pg-cell.weekend  { background:rgba(122,143,166,.05); color:rgba(122,143,166,.3); }
+    /* ── Sal cards ── */
+    .rh-sal-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:13px; }
+    .rh-sal-card { background:var(--bg); border:1px solid var(--bd); border-radius:var(--radius); overflow:hidden; cursor:pointer; transition:var(--trans); }
+    .rh-sal-card:hover { transform:translateY(-2px); border-color:rgba(200,168,75,.28); box-shadow:var(--shadow-lg); }
+    .rh-sal-card-bar  { height:3px; }
+    .rh-sal-card-body { padding:15px; }
+    .rh-sal-card-meta { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:10px; }
+    .rh-sal-meta-item { font-size:11px; color:var(--af); display:flex; align-items:center; gap:4px; }
+    .rh-sal-meta-item strong { color:var(--ac); font-weight:500; }
+    .rh-sal-card-footer { padding:10px 15px; border-top:1px solid var(--bd); display:flex; align-items:center; justify-content:space-between; }
+    /* ── Congés ── */
+    .rh-conges-row   { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+    .rh-conges-label { font-size:12px; font-weight:500; width:140px; flex-shrink:0; }
+    .rh-conges-count { font-family:'Syne',sans-serif; font-size:14px; font-weight:800; color:var(--or); width:50px; text-align:right; }
+    /* ── Contrat badges ── */
+    .cb-cdi          { background:rgba(74,222,128,.12); color:var(--vll); border:1px solid rgba(74,222,128,.2); }
+    .cb-cdd          { background:rgba(234,179,8,.15);  color:var(--jn);  border:1px solid rgba(234,179,8,.2);  }
+    .cb-apprentissage{ background:rgba(167,139,250,.15);color:#A78BFA;   border:1px solid rgba(167,139,250,.2); }
+    .cb-interimaire  { background:rgba(74,123,168,.15); color:var(--bc);  border:1px solid rgba(74,123,168,.2);  }
+    @media (max-width:768px) { .rh-sal-grid { grid-template-columns:1fr; } .rh-sal-card-meta { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div id="sb-mount"></div>
+  <div id="hdr-mount"></div>
+  <div id="banner-mount"></div>
+  <div id="modal-mount"></div>
+
+  <main id="main">
+    <!-- DASHBOARD -->
+    <div class="view active" id="vc-view-dashboard">
+      <div style="margin-bottom:16px;">
+        <h1 style="font-family:'Syne',sans-serif;font-size:21px;font-weight:800;">RH & Équipe <span style="color:var(--or);">2026</span></h1>
+        <p style="color:var(--af);font-size:12px;margin-top:2px;">Ressources humaines — SARL Vilar DS</p>
+      </div>
+      <div class="kg" id="dash-kpis"></div>
+      <div class="dual">
+        <div class="sec" style="margin-bottom:0;"><h3>👤 Équipe active</h3><div id="dash-equipe"></div></div>
+        <div class="sec" style="margin-bottom:0;"><h3>⚠ Alertes RH</h3><div id="dash-alertes"></div></div>
+      </div>
+      <div class="sec" style="margin-top:13px;"><h3>📅 Planning — Semaine du 28 Avr au 2 Mai 2026</h3><div id="dash-planning"></div></div>
+      <div class="sec"><h3>⏱ Heures par chantier — Avril 2026</h3><div id="dash-heures"></div></div>
+    </div>
+    <!-- SALARIÉS -->
+    <div class="view" id="vc-view-salaries">
+      <div class="sh"><div class="st">👤 Salariés</div><button class="bo" onclick="RH.openModal('salarie')">+ Nouveau salarié</button></div>
+      <div class="rh-sal-grid" id="sal-grid"></div>
+    </div>
+    <!-- PLANNING -->
+    <div class="view" id="vc-view-planning">
+      <div class="sh">
+        <div class="st">📅 Planning Mensuel</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="bg2" onclick="RH.prevMonth()">‹</button>
+          <span id="planning-title" style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--or);min-width:140px;text-align:center;"></span>
+          <button class="bg2" onclick="RH.nextMonth()">›</button>
+          <button class="bo" onclick="RH.openModal('absence')">+ Absence</button>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="rh-planning-wrap"><div id="planning-grid"></div></div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;font-size:11.5px;border-top:1px solid var(--bd);padding-top:10px;">
+          <span><span style="display:inline-block;width:14px;height:8px;border-radius:2px;background:rgba(74,123,168,.3);margin-right:4px;vertical-align:middle;"></span>Travail</span>
+          <span><span style="display:inline-block;width:14px;height:8px;border-radius:2px;background:rgba(234,179,8,.3);margin-right:4px;vertical-align:middle;"></span>Congé</span>
+          <span><span style="display:inline-block;width:14px;height:8px;border-radius:2px;background:rgba(167,139,250,.3);margin-right:4px;vertical-align:middle;"></span>RTT</span>
+          <span><span style="display:inline-block;width:14px;height:8px;border-radius:2px;background:rgba(248,113,113,.3);margin-right:4px;vertical-align:middle;"></span>Maladie</span>
+          <span><span style="display:inline-block;width:14px;height:8px;border-radius:2px;background:rgba(200,168,75,.3);margin-right:4px;vertical-align:middle;"></span>Formation</span>
+        </div>
+      </div>
+    </div>
+    <!-- CONGÉS -->
+    <div class="view" id="vc-view-conges">
+      <div class="sh"><div class="st">🏖 Congés & Absences</div><button class="bo" onclick="RH.openModal('absence')">+ Absence</button></div>
+      <div class="sec"><h3>Soldes congés 2026</h3><div id="soldes-conges"></div></div>
+      <div class="sec"><h3>Absences enregistrées</h3><div id="absences-list"></div></div>
+    </div>
+    <!-- HEURES -->
+    <div class="view" id="vc-view-heures">
+      <div class="sh">
+        <div class="st">⏱ Heures & Chantiers</div>
+        <div style="display:flex;gap:8px;">
+          <select id="mois-heures" class="fi" style="width:auto;" onchange="RH.renderHeures()">
+            <option value="0">Janvier</option><option value="1">Février</option><option value="2">Mars</option>
+            <option value="3" selected>Avril</option><option value="4">Mai</option><option value="5">Juin</option>
+            <option value="6">Juillet</option><option value="7">Août</option><option value="8">Septembre</option>
+            <option value="9">Octobre</option><option value="10">Novembre</option><option value="11">Décembre</option>
+          </select>
+          <button class="bo" onclick="RH.openModal('heures')">+ Saisir heures</button>
+        </div>
+      </div>
+      <div class="sec"><div id="heures-table"></div></div>
+      <div class="sec"><h3>Récapitulatif par chantier</h3><div id="heures-chantier"></div></div>
+    </div>
+    <!-- FORMATIONS -->
+    <div class="view" id="vc-view-formations">
+      <div class="sh"><div class="st">🎓 Formations & Habilitations</div><button class="bo" onclick="RH.openModal('formation')">+ Ajouter</button></div>
+      <div id="formations-content"></div>
+    </div>
+    <!-- DOCUMENTS RH -->
+    <div class="view" id="vc-view-documents">
+      <div class="sh"><div class="st">📋 Documents RH</div><button class="bo" onclick="RH.openModal('document')">+ Ajouter</button></div>
+      <div id="documents-content"></div>
+    </div>
+    <!-- SOUS-TRAITANTS -->
+    <div class="view" id="vc-view-sous-traitants">
+      <div class="sh"><div class="st">🔧 Sous-traitants</div><button class="bo" onclick="RH.openModal('sous-traitant')">+ Nouveau</button></div>
+      <div class="rh-sal-grid" id="sst-grid"></div>
+    </div>
+    <!-- DÉTAIL SST -->
+    <div class="view" id="vc-view-detail-sst">
+      <div class="back" onclick="VilarCore.nav.go('sous-traitants')">← Retour</div>
+      <div id="detail-sst-content"></div>
+    </div>
+    <!-- DÉTAIL SALARIÉ -->
+    <div class="view" id="vc-view-detail">
+      <div class="back" onclick="VilarCore.nav.back()">← Retour</div>
+      <div id="detail-content"></div>
+    </div>
+  </main>
+  <script>
+  (function () {
+    'use strict';
+
+    /* ── Raccourcis core ── */
+    const { db, bus, persistence, toast, modal, nav, io, utils,
+            safeIcons, pwa, MOIS, JOURS_SEMAINE, TODAY } = VilarCore;
+    const UI = VilarUI;
+    const $ = utils.$;
+    const fmtD = utils.fmtD;
+
+    /* ── Helpers locaux ── */
+    const fmt      = (n,d=0) => Number(n||0).toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d}) + ' €';
+    const pct      = (val,total) => total > 0 ? Math.round((val/total)*100) : 0;
+    const daysUntil= d => { if(!d) return null; return Math.ceil((new Date(d) - TODAY) / 864e5); };
+
+    /* ── Config ── */
+    const MODULE_KEY  = 'rh';
+    const LEGACY_DB   = 'VilarDS_RH_DB';
+    const LEGACY_STORE= 'rhdata';
+    const LEGACY_KEY  = 'rh';
+
+    const ABS_LABELS = { conge:'Congés', maladie:'Maladie', rtt:'RTT', formation:'Formation', autre:'Autre' };
+    const ABS_CODES  = { conge:'CP', maladie:'M', rtt:'R', formation:'F', autre:'A' };
+    const CONTRAT_CSS= { CDI:'cb-cdi', CDD:'cb-cdd', Apprentissage:'cb-apprentissage', 'Intérimaire':'cb-interimaire' };
+    const COLORS_SAL = ['#C8A84B','#4A7BA8','#4ADE80','#A78BFA','#F87171','#FB923C'];
+    const COLORS_SST = ['#FB923C','#EAB308','#4ADE80','#A78BFA','#4A7BA8','#C8A84B','#F87171'];
+    const CHANTIERS  = ['VDS-2026-001','VDS-2026-002','VDS-2026-003','VDS-2026-004','VDS-2026-005','VDS-2026-006','VDS-2026-007','VDS-2026-008','VDS-2026-009','VDS-2026-010','BUREAU','FORMATION','DIVERS'];
+
+    /* ════════════════════════════════════════════════════════════════
+       DONNÉES PAR DÉFAUT
+    ════════════════════════════════════════════════════════════════ */
+    const DEFAULTS = {
+      salaries: [
+        { id:1, nom:'Julio Vilar',      prenom:'Julio',     poste:'Gérant — Chef de chantier', contrat:'CDI',          statut:'actif', dateEntree:'2018-06-15', dateNaissance:'1982-03-12', tel:'06 00 00 00 01', email:'julio@vilards.fr', salaireBrut:3200, heuresSemaine:39, congesAcquis:25, congesPris:0, rttAcquis:6, rttPris:0, couleur:'#C8A84B', initiales:'JV', notes:'Gérant fondateur. Habilitations à renouveler.' },
+        { id:2, nom:'Sébastien Martin', prenom:'Sébastien', poste:'Maçon qualifié N3P1',       contrat:'CDI',          statut:'actif', dateEntree:'2021-03-01', dateNaissance:'1990-07-22', tel:'06 11 22 33 44', email:'',               salaireBrut:2100, heuresSemaine:39, congesAcquis:25, congesPris:5, rttAcquis:6, rttPris:2, couleur:'#4A7BA8', initiales:'SM', notes:'Maçon polyvalent.' },
+        { id:3, nom:'Karim Benhaj',     prenom:'Karim',     poste:'Maçon N2P2',                 contrat:'CDI',          statut:'actif', dateEntree:'2022-09-05', dateNaissance:'1995-11-08', tel:'06 55 66 77 88', email:'',               salaireBrut:1850, heuresSemaine:39, congesAcquis:25, congesPris:8, rttAcquis:6, rttPris:1, couleur:'#4ADE80', initiales:'KB', notes:'Spécialisé carrelage.' },
+        { id:4, nom:'Emre Yildiz',      prenom:'Emre',      poste:'Aide maçon — Apprenti',      contrat:'Apprentissage',statut:'actif', dateEntree:'2024-09-02', dateNaissance:'2005-04-20', tel:'06 99 88 77 66', email:'',               salaireBrut:950,  heuresSemaine:35, congesAcquis:25, congesPris:0, rttAcquis:0, rttPris:0, couleur:'#A78BFA', initiales:'EY', notes:'Apprenti CAP Maçonnerie.' },
+      ],
+      absences: [
+        { id:1, salId:2, type:'conge',   debut:'2026-02-17', fin:'2026-02-21', jours:5, motif:'Congés hiver' },
+        { id:2, salId:3, type:'conge',   debut:'2026-03-30', fin:'2026-04-04', jours:4, motif:'Congés printemps' },
+        { id:3, salId:3, type:'maladie', debut:'2026-01-20', fin:'2026-01-22', jours:3, motif:'Arrêt maladie' },
+        { id:4, salId:2, type:'rtt',     debut:'2026-04-02', fin:'2026-04-02', jours:1, motif:'RTT' },
+      ],
+      heures: [
+        { id:1, salId:1, mois:0, chantier:'VDS-2026-009', heures:24, semaine:1 },
+        { id:2, salId:2, mois:0, chantier:'VDS-2026-009', heures:39, semaine:1 },
+        { id:3, salId:3, mois:0, chantier:'VDS-2026-010', heures:26, semaine:1 },
+        { id:4, salId:1, mois:1, chantier:'VDS-2026-001', heures:32, semaine:1 },
+        { id:5, salId:2, mois:1, chantier:'VDS-2026-001', heures:39, semaine:1 },
+        { id:6, salId:1, mois:2, chantier:'VDS-2026-003', heures:28, semaine:1 },
+        { id:7, salId:3, mois:2, chantier:'VDS-2026-003', heures:39, semaine:1 },
+        { id:8, salId:1, mois:3, chantier:'VDS-2026-004', heures:32, semaine:1 },
+        { id:9, salId:2, mois:3, chantier:'VDS-2026-002', heures:39, semaine:1 },
+        { id:10,salId:3, mois:3, chantier:'VDS-2026-003', heures:30, semaine:1 },
+        { id:11,salId:4, mois:3, chantier:'VDS-2026-004', heures:28, semaine:1 },
+      ],
+      formations: [
+        { id:1, salId:1, titre:'CACES R482 Cat. A',          date:'2023-05-10', expiration:'2026-05-10', organisme:'AFPA Orléans',  statut:'valide', cout:450 },
+        { id:2, salId:1, titre:'SST Sauveteur Secouriste',    date:'2023-09-01', expiration:'2025-09-01', organisme:'INRS',          statut:'expire', cout:200 },
+        { id:3, salId:2, titre:'CACES R482 Cat. A',          date:'2022-04-15', expiration:'2025-04-15', organisme:'AFPA',          statut:'expire', cout:450 },
+        { id:4, salId:2, titre:'Habilitation électrique B0',  date:'2023-01-10', expiration:'2026-01-10', organisme:'AFPA',          statut:'expire', cout:180 },
+        { id:5, salId:3, titre:'SST Sauveteur Secouriste',    date:'2022-10-01', expiration:'2024-10-01', organisme:'INRS',          statut:'expire', cout:200 },
+        { id:6, salId:4, titre:'CAP Maçonnerie — CFA BTP',    date:'2024-09-01', expiration:'2026-06-30', organisme:'CFA BTP Loiret',statut:'valide', cout:0   },
+      ],
+      docsRH: [
+        { id:1, salId:1, type:'Contrat de travail',   date:'2018-06-15', notes:'Gérant — statut TNS' },
+        { id:2, salId:2, type:'Contrat CDI',           date:'2021-03-01', notes:'Maçon N3P1'         },
+        { id:3, salId:3, type:'Contrat CDI',           date:'2022-09-05', notes:'Maçon N2P2'         },
+        { id:4, salId:4, type:'Contrat apprentissage', date:'2024-09-02', notes:'CAP Maçonnerie'     },
+        { id:5, salId:1, type:'Visite médicale',       date:'2024-06-01', notes:'Apte — prochaine 2026' },
+        { id:6, salId:2, type:'Visite médicale',       date:'2024-03-15', notes:'Apte'               },
+      ],
+      sousTraitants: [
+        { id:101, nom:'Charpente Bois Loire',    contact:'M. Alain Dubois',  tel:'06 77 88 99 00', email:'charpente-loire@email.fr', siret:'12345678900014', specialite:'Charpente bois — fermettes',          tva_intra:'FR12 123456789', assurance:'AXA Pro — POL-2024-001',    assuranceExp:'2025-12-31', rge:'Non',             statut:'actif',   tauxHoraire:65, couleur:'#FB923C', initiales:'CB', notes:'Partenaire habituel extension ossature bois.' },
+        { id:102, nom:'Élec Orléans 45',         contact:'M. Pierre Renaud', tel:'07 11 22 33 44', email:'elec45@email.fr',          siret:'98765432100021', specialite:'Électricité — tableau + prises',      tva_intra:'FR98 987654321', assurance:'MAAF Pro — POL-2024-002',   assuranceExp:'2026-06-30', rge:'Oui — QualiPAC', statut:'actif',   tauxHoraire:58, couleur:'#EAB308', initiales:'EO', notes:'Intervient sur nos chantiers rénovation.' },
+        { id:103, nom:'Plomberie Thermo Centre', contact:'Mme Sophie Petit', tel:'06 44 55 66 77', email:'',                        siret:'45678901200018', specialite:'Plomberie — sanitaires — chauffage', tva_intra:'FR45 456789012', assurance:'Generali — POL-2024-003',   assuranceExp:'2024-12-31', rge:'Oui — RGE QualiPAC', statut:'actif',tauxHoraire:62, couleur:'#4ADE80', initiales:'PT', notes:'RGE pour PAC. Assurance à renouveler.' },
+        { id:104, nom:'Peinture & Enduits 45',   contact:'M. Rachid Amor',   tel:'06 99 00 11 22', email:'',                        siret:'',               specialite:'Peinture intérieure/extérieure',     tva_intra:'',              assurance:'',                          assuranceExp:'',           rge:'Non',             statut:'inactif', tauxHoraire:45, couleur:'#A78BFA', initiales:'PE', notes:'Mis en veille — qualité insuffisante.' },
+      ],
+    };
+
+    /* ════════════════════════════════════════════════════════════════
+       STATE
+    ════════════════════════════════════════════════════════════════ */
+    let STATE = {
+      salaries:      DEFAULTS.salaries.map(s=>({...s})),
+      absences:      DEFAULTS.absences.map(a=>({...a})),
+      heures:        DEFAULTS.heures.map(h=>({...h})),
+      formations:    DEFAULTS.formations.map(f=>({...f})),
+      docsRH:        DEFAULTS.docsRH.map(d=>({...d})),
+      sousTraitants: DEFAULTS.sousTraitants.map(s=>({...s})),
+      nextId:     100,
+      nextIdSST:  200,
+      planningMois:  3,
+      planningAnnee: 2026,
+      modalType: null,
+      editId:    null,
+    };
+
+    const getSal = id => STATE.salaries.find(s => s.id === id);
+
+    /* ════════════════════════════════════════════════════════════════
+       PERSISTANCE
+    ════════════════════════════════════════════════════════════════ */
+    const App = {
+      getData() {
+        return { salaries:STATE.salaries, absences:STATE.absences, heures:STATE.heures,
+                 formations:STATE.formations, docsRH:STATE.docsRH, sousTraitants:STATE.sousTraitants,
+                 nextId:STATE.nextId, nextIdSST:STATE.nextIdSST };
+      },
+      applyData(s) {
+        if (s.salaries)      STATE.salaries      = s.salaries;
+        if (s.absences)      STATE.absences      = s.absences;
+        if (s.heures)        STATE.heures        = s.heures;
+        if (s.formations)    STATE.formations    = s.formations;
+        if (s.docsRH)        STATE.docsRH        = s.docsRH;
+        if (s.sousTraitants) STATE.sousTraitants = s.sousTraitants;
+        if (s.nextId)        STATE.nextId        = s.nextId;
+        if (s.nextIdSST)     STATE.nextIdSST     = s.nextIdSST;
+      },
+      getSnapshot() {
+        return {
+          nbSalaries:   STATE.salaries.filter(s=>s.statut==='actif').length,
+          formExpires:  STATE.formations.filter(f=>f.statut==='expire').length,
+          masseSalariale:STATE.salaries.filter(s=>s.statut==='actif').reduce((s,x)=>s+x.salaireBrut,0),
+        };
+      },
+      validateImport: d => d && (Array.isArray(d.salaries) || Array.isArray(d.sousTraitants)),
+    };
+
+    /* ════════════════════════════════════════════════════════════════
+       ALERTES
+    ════════════════════════════════════════════════════════════════ */
+    function computeAlerts() {
+      const al = [];
+      STATE.formations.forEach(f => {
+        const j = daysUntil(f.expiration);
+        const sal = getSal(f.salId);
+        if (j !== null && j < 0)    al.push({ type:'urgent', ico:'🔴', titre:`Expirée — ${f.titre}`,         sub:`${sal?.nom||'—'} · ${Math.abs(j)}j dépassé`, id:f.salId });
+        else if (j !== null && j<=60) al.push({ type:'warn',   ico:'🟡', titre:`Bientôt expirée — ${f.titre}`, sub:`${sal?.nom||'—'} · Dans ${j}j`,               id:f.salId });
+      });
+      STATE.salaries.filter(s=>s.statut==='actif').forEach(s => {
+        if ((s.congesAcquis - s.congesPris) <= 2)
+          al.push({ type:'info', ico:'🏖', titre:`Solde bas — ${s.nom}`, sub:`${s.congesAcquis-s.congesPris}j restant(s)`, id:s.id });
+      });
+      STATE.absences.forEach(a => {
+        const sal = getSal(a.salId);
+        if (TODAY >= new Date(a.debut) && TODAY <= new Date(a.fin))
+          al.push({ type:'info', ico:'📅', titre:`Absent — ${sal?.nom||'—'}`, sub:`${ABS_LABELS[a.type]||a.type} jusqu'au ${fmtD(a.fin)}`, id:a.salId });
+      });
+      return al;
+    }
+
+    /* ── Badge helpers ── */
+    function badgeSal(s) {
+      return `<span class="sbadge ${CONTRAT_CSS[s.contrat]||'s-af'}">${utils.esc(s.contrat)}</span>`;
+    }
+    function badgeStatut(s) {
+      return s.statut === 'actif'
+        ? `<span class="sbadge s-vl">✓ Actif</span>`
+        : `<span class="sbadge s-rl">✗ Inactif</span>`;
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       RENDUS — objet RH
+    ════════════════════════════════════════════════════════════════ */
+    const RH = {
+
+      /* ── Dashboard ── */
+      renderDashboard() {
+        const actifs = STATE.salaries.filter(s => s.statut === 'actif');
+        const masse  = actifs.reduce((s, x) => s + x.salaireBrut, 0);
+        const fExp   = STATE.formations.filter(f => f.statut === 'expire').length;
+        const absNow = STATE.absences.filter(a => TODAY >= new Date(a.debut) && TODAY <= new Date(a.fin)).length;
+        const al     = computeAlerts();
+
+        $('dash-kpis').innerHTML = [
+          { l:'Effectif actif',      v:actifs.length,              s:'Salariés en poste',         c:'cb'                           },
+          { l:'Masse salariale',     v:fmt(masse),                 s:'Brut mensuel',              c:'co'                           },
+          { l:'Congés moy. restants',v:Math.round(actifs.reduce((s,x)=>s+x.congesAcquis-x.congesPris,0)/Math.max(1,actifs.length))+'j', s:'Par salarié', c:'cv' },
+          { l:'Formations expirées', v:fExp,                       s:'À renouveler',              c:fExp>0?'cr':'cv'               },
+          { l:'Absents ce jour',     v:absNow,                     s:"Aujourd'hui",               c:absNow>0?'cj':'cv'             },
+          { l:'Alertes RH',          v:al.length,                  s:'Actions requises',          c:al.length>0?'cr':'cv'          },
+          { l:'Sous-traitants actifs',v:STATE.sousTraitants.filter(s=>s.statut==='actif').length, s:'Partenaires',c:'cb'           },
+        ].map(k=>`<div class="kpi ${k.c}"><div class="kl">${k.l}</div><div class="kv">${k.v}</div><div class="ks">${k.s}</div></div>`).join('');
+
+        // Pills sidebar
+        const sp=$('pill-salaries'),fp=$('pill-formations'),ap=$('pill-conges'),sstP=$('pill-sst');
+        if(sp) sp.textContent=actifs.length;
+        if(fp) fp.textContent=fExp;
+        if(ap) ap.textContent=STATE.absences.length;
+        if(sstP) sstP.textContent=STATE.sousTraitants.filter(s=>s.statut==='actif').length;
+
+        $('dash-equipe').innerHTML = actifs.map(s => {
+          const absAuj = STATE.absences.some(a=>a.salId===s.id&&TODAY>=new Date(a.debut)&&TODAY<=new Date(a.fin));
+          return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd);cursor:pointer;" onclick="RH.openDetail(${s.id})">
+            ${UI.avatar(s.initiales,s.couleur)}
+            <div style="flex:1;">
+              <div style="font-size:13px;font-weight:600;">${utils.esc(s.nom)}</div>
+              <div style="font-size:10.5px;color:var(--af);">${utils.esc(s.poste)}</div>
+            </div>
+            <div style="text-align:right;">
+              ${absAuj?`<span class="sbadge s-jn">Absent</span>`:'<span style="font-size:10px;color:var(--vll);font-weight:600;">✓ Présent</span>'}
+              <div style="font-size:10px;color:var(--af);margin-top:2px;">${s.congesAcquis-s.congesPris}j congés</div>
+            </div>
+          </div>`;
+        }).join('');
+
+        $('dash-alertes').innerHTML = al.length === 0
+          ? '<div class="empty empty-ok">✓ Aucune alerte</div>'
+          : al.slice(0,5).map(a=>`<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer;" onclick="RH.openDetail(${a.id})">
+              <span style="font-size:15px;">${a.ico}</span>
+              <div><div style="font-size:12px;font-weight:600;">${a.titre.split('—')[0].trim()}</div>
+              <div style="font-size:10.5px;color:var(--af);">${a.sub}</div></div>
+            </div>`).join('');
+
+        // Planning semaine courante
+        const DATES_SEM = ['2026-04-28','2026-04-29','2026-04-30','2026-05-01','2026-05-02'];
+        const JOURS_SEM = ['Lun 28','Mar 29','Mer 30','Jeu 1','Ven 2'];
+        let grid=`<div style="display:grid;grid-template-columns:120px repeat(${JOURS_SEM.length},1fr);gap:1px;background:var(--bd);border-radius:8px;overflow:hidden;font-size:10.5px;">`;
+        grid+=`<div class="rh-pg-cell hdr hdr-name"></div>${JOURS_SEM.map(j=>`<div class="rh-pg-cell hdr">${j}</div>`).join('')}`;
+        actifs.forEach(s=>{
+          grid+=`<div class="rh-pg-cell name" style="color:${s.couleur};">${utils.esc(s.prenom)}</div>`;
+          DATES_SEM.forEach(ds=>{
+            const abs=STATE.absences.find(a=>a.salId===s.id&&a.debut<=ds&&a.fin>=ds);
+            grid+=abs?`<div class="rh-pg-cell ${abs.type}" style="font-size:9px;">${ABS_CODES[abs.type]||'A'}</div>`
+                    :`<div class="rh-pg-cell travail" style="font-size:9px;">✓</div>`;
+          });
+        });
+        grid+=`</div>`;
+        $('dash-planning').innerHTML=grid;
+
+        // Heures Avril
+        const hAvr=STATE.heures.filter(h=>h.mois===3);
+        const parC={};
+        hAvr.forEach(h=>{parC[h.chantier]=(parC[h.chantier]||0)+h.heures;});
+        $('dash-heures').innerHTML=Object.keys(parC).length===0?'<div class="empty">Aucune heure pour Avril.</div>'
+          :`<table class="htab"><thead><tr><th>Chantier</th><th>Heures</th><th>Coût estimé (45€/h)</th></tr></thead><tbody>`
+          +Object.entries(parC).map(([ch,h])=>`<tr><td style="font-weight:600;">${ch}</td><td class="montant">${h}h</td><td class="montant">${fmt(h*45)}</td></tr>`).join('')
+          +`<tr class="total-row"><td>TOTAL</td><td class="montant">${Object.values(parC).reduce((s,h)=>s+h,0)}h</td><td class="montant">${fmt(Object.values(parC).reduce((s,h)=>s+h,0)*45)}</td></tr></tbody></table>`;
+      },
+
+      /* ── Salariés ── */
+      renderSalaries() {
+        const el=$('sal-grid'); if(!el)return;
+        el.innerHTML=STATE.salaries.map(s=>{
+          const cr=s.congesAcquis-s.congesPris;
+          const fExp=STATE.formations.filter(f=>f.salId===s.id&&f.statut==='expire').length;
+          return `<div class="rh-sal-card" onclick="RH.openDetail(${s.id})">
+            <div class="rh-sal-card-bar" style="background:${s.couleur};"></div>
+            <div class="rh-sal-card-body">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  ${UI.avatar(s.initiales,s.couleur,'44px')}
+                  <div>
+                    <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;">${utils.esc(s.nom)}</div>
+                    <div style="font-size:11.5px;color:var(--bc);font-weight:500;">${utils.esc(s.poste)}</div>
+                  </div>
+                </div>
+                ${badgeSal(s)}
+              </div>
+              <div class="rh-sal-card-meta">
+                <div class="rh-sal-meta-item">📅 <strong>${fmtD(s.dateEntree)}</strong></div>
+                <div class="rh-sal-meta-item">💰 <strong>${s.salaireBrut.toLocaleString('fr-FR')} €</strong>/mois</div>
+                <div class="rh-sal-meta-item">🏖 <strong>${cr}j</strong> restants</div>
+                <div class="rh-sal-meta-item">⏱ <strong>${s.heuresSemaine}h</strong>/semaine</div>
+                ${fExp>0?`<div class="rh-sal-meta-item" style="color:var(--rll);">⚠ ${fExp} form. expirée${fExp>1?'s':''}</div>`:''}
+              </div>
+            </div>
+            <div class="rh-sal-card-footer">
+              <span style="font-size:11.5px;color:${s.statut==='actif'?'var(--vll)':'var(--rll)'};">${s.statut==='actif'?'✓ Actif':'✗ Inactif'}</span>
+              <div style="display:flex;gap:5px;" onclick="event.stopPropagation()">
+                <button class="bg2" onclick="RH.editSalarie(${s.id})">✎</button>
+                <button class="bd2" onclick="RH.deleteSalarie(${s.id})">🗑</button>
+              </div>
+            </div>
+          </div>`;
+        }).join('');
+      },
+
+      /* ── Planning mensuel ── */
+      renderPlanning() {
+        const el=$('planning-grid'); if(!el)return;
+        $('planning-title').textContent=`${MOIS[STATE.planningMois]} ${STATE.planningAnnee}`;
+        const nbJ=new Date(STATE.planningAnnee,STATE.planningMois+1,0).getDate();
+        const jours=Array.from({length:nbJ},(_,i)=>{const d=new Date(STATE.planningAnnee,STATE.planningMois,i+1);return{j:i+1,dow:d.getDay()};});
+        const actifs=STATE.salaries.filter(s=>s.statut==='actif');
+        const minW=130+nbJ*26;
+        let html=`<div style="display:grid;grid-template-columns:130px repeat(${nbJ},1fr);gap:1px;background:var(--bd);border-radius:8px;overflow:hidden;font-size:9px;min-width:${minW}px;">`;
+        html+=`<div class="rh-pg-cell hdr hdr-name">Salarié</div>`;
+        jours.forEach(jj=>{const isWE=jj.dow===0||jj.dow===6;html+=`<div class="rh-pg-cell hdr${isWE?' weekend':''}">${['D','L','M','M','J','V','S'][jj.dow]}<br>${jj.j}</div>`;});
+        actifs.forEach(s=>{
+          html+=`<div class="rh-pg-cell name" style="color:${s.couleur};">${utils.esc(s.prenom)}</div>`;
+          jours.forEach(jj=>{
+            const ds=`${STATE.planningAnnee}-${String(STATE.planningMois+1).padStart(2,'0')}-${String(jj.j).padStart(2,'0')}`;
+            const isWE=jj.dow===0||jj.dow===6;
+            if(isWE){html+=`<div class="rh-pg-cell weekend"></div>`;return;}
+            const abs=STATE.absences.find(a=>a.salId===s.id&&a.debut<=ds&&a.fin>=ds);
+            html+=abs?`<div class="rh-pg-cell ${abs.type}" title="${abs.motif||''}">${ABS_CODES[abs.type]||'A'}</div>`
+                    :`<div class="rh-pg-cell travail"></div>`;
+          });
+        });
+        html+=`</div>`;
+        el.innerHTML=html;
+      },
+      prevMonth(){STATE.planningMois--;if(STATE.planningMois<0){STATE.planningMois=11;STATE.planningAnnee--;}this.renderPlanning();},
+      nextMonth(){STATE.planningMois++;if(STATE.planningMois>11){STATE.planningMois=0;STATE.planningAnnee++;}this.renderPlanning();},
+
+      /* ── Congés ── */
+      renderConges() {
+        const actifs=STATE.salaries.filter(s=>s.statut==='actif');
+        $('soldes-conges').innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:13px;">
+          ${actifs.map(s=>{const cr=s.congesAcquis-s.congesPris,rr=s.rttAcquis-s.rttPris;return `
+            <div class="sec" style="margin-bottom:0;">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">${UI.avatar(s.initiales,s.couleur)}
+                <div><div style="font-weight:700;font-size:13px;">${utils.esc(s.nom)}</div><div style="font-size:10.5px;color:var(--af);">${utils.esc(s.poste)}</div></div>
+              </div>
+              <div class="rh-conges-row">
+                <span class="rh-conges-label">Congés payés</span>
+                <div style="flex:1;">${UI.progressBar(pct(s.congesAcquis-cr,s.congesAcquis),'pf-or')}</div>
+                <span class="rh-conges-count">${cr}j</span>
+              </div>
+              <div style="font-size:10.5px;color:var(--af);margin-bottom:8px;">Pris: ${s.congesPris}j / Acquis: ${s.congesAcquis}j</div>
+              <div class="rh-conges-row">
+                <span class="rh-conges-label">RTT</span>
+                <div style="flex:1;">${UI.progressBar(s.rttAcquis>0?pct(rr,s.rttAcquis):0,'pf-vl')}</div>
+                <span class="rh-conges-count">${rr}j</span>
+              </div>
+            </div>`;}).join('')}
+        </div>`;
+        const sorted=[...STATE.absences].sort((a,b)=>b.debut.localeCompare(a.debut));
+        $('absences-list').innerHTML=sorted.length===0?'<div class="empty">Aucune absence enregistrée.</div>'
+          :`<table class="htab"><thead><tr><th>Salarié</th><th>Type</th><th>Du</th><th>Au</th><th>Jours</th><th>Motif</th><th></th></tr></thead><tbody>
+            ${sorted.map(a=>{const sal=getSal(a.salId);return`<tr>
+              <td style="font-weight:600;">${sal?.nom||'—'}</td>
+              <td><span class="sbadge s-or">${ABS_LABELS[a.type]||a.type}</span></td>
+              <td>${fmtD(a.debut)}</td><td>${fmtD(a.fin)}</td>
+              <td class="num">${a.jours}j</td>
+              <td style="color:var(--af);font-size:11.5px;">${a.motif||'—'}</td>
+              <td><button class="bd2" onclick="RH.deleteAbsence(${a.id})">✕</button></td>
+            </tr>`;}).join('')}
+          </tbody></table>`;
+      },
+
+      /* ── Heures ── */
+      renderHeures() {
+        const mois=parseInt($('mois-heures')?.value||3);
+        const hM=STATE.heures.filter(h=>h.mois===mois);
+        $('heures-table').innerHTML=`<table class="htab"><thead><tr><th>Salarié</th><th>Chantier</th><th>Heures</th><th>Semaine</th><th></th></tr></thead><tbody>
+          ${hM.length===0?`<tr><td colspan="5"><div class="empty">Aucune heure pour ${MOIS[mois]}. <span style="color:var(--bc);cursor:pointer;" onclick="RH.openModal('heures')">+ Ajouter</span></div></td></tr>`
+            :hM.map(h=>{const sal=getSal(h.salId);return`<tr>
+              <td style="font-weight:600;">${sal?.nom||'—'}</td>
+              <td>${h.chantier}</td><td class="num">${h.heures}h</td><td>S${h.semaine}</td>
+              <td><button class="bd2" onclick="RH.deleteHeures(${h.id})">✕</button></td>
+            </tr>`;}).join('')}
+          ${hM.length>0?`<tr class="total-row"><td colspan="2">TOTAL ${MOIS[mois]}</td><td class="num">${hM.reduce((s,h)=>s+h.heures,0)}h</td><td colspan="2"></td></tr>`:''}
+        </tbody></table>`;
+        const parC={};
+        hM.forEach(h=>{parC[h.chantier]=(parC[h.chantier]||0)+h.heures;});
+        $('heures-chantier').innerHTML=Object.keys(parC).length===0?'<div class="empty">Aucune donnée.</div>'
+          :`<table class="htab"><thead><tr><th>Chantier</th><th>Heures</th><th>Coût estimé (45€/h chargé)</th></tr></thead><tbody>
+            ${Object.entries(parC).map(([ch,h])=>`<tr><td style="font-weight:600;">${ch}</td><td class="num">${h}h</td><td class="num">${fmt(h*45)}</td></tr>`).join('')}
+            <tr class="total-row"><td>TOTAL</td><td class="num">${Object.values(parC).reduce((s,h)=>s+h,0)}h</td><td class="num">${fmt(Object.values(parC).reduce((s,h)=>s+h,0)*45)}</td></tr>
+          </tbody></table>`;
+      },
+
+      /* ── Formations ── */
+      renderFormations() {
+        const el=$('formations-content'); if(!el)return;
+        const exp=STATE.formations.filter(f=>f.statut==='expire');
+        const val=STATE.formations.filter(f=>f.statut==='valide');
+        const makeTable=list=>list.length===0?'<div class="empty">Aucune.</div>'
+          :`<table class="htab"><thead><tr><th>Salarié</th><th>Formation</th><th>Date</th><th>Expiration</th><th>Organisme</th><th>Coût</th><th></th></tr></thead><tbody>
+            ${list.map(f=>{const sal=getSal(f.salId);const j=daysUntil(f.expiration);const ec=j!==null&&j<0?'var(--rll)':j!==null&&j<60?'var(--jn)':'var(--vll)';return`<tr>
+              <td style="font-weight:600;">${sal?.nom||'—'}</td><td>${utils.esc(f.titre)}</td>
+              <td>${fmtD(f.date)}</td><td style="font-weight:600;color:${ec};">${fmtD(f.expiration)}</td>
+              <td style="color:var(--af);">${f.organisme||'—'}</td>
+              <td class="num">${f.cout?fmt(f.cout):'—'}</td>
+              <td><button class="bd2" onclick="RH.deleteFormation(${f.id})">✕</button></td>
+            </tr>`;}).join('')}</tbody></table>`;
+        el.innerHTML=`
+          <div class="sec" style="border-left:3px solid var(--rll);"><h3>🔴 Formations expirées (${exp.length})</h3>${makeTable(exp)}</div>
+          <div class="sec"><h3>✅ Formations valides (${val.length})</h3>${makeTable(val)}</div>`;
+      },
+
+      /* ── Documents RH ── */
+      renderDocumentsRH() {
+        const el=$('documents-content'); if(!el)return;
+        el.innerHTML=`<div class="sec"><table class="htab"><thead><tr><th>Salarié</th><th>Type</th><th>Date</th><th>Notes</th><th></th></tr></thead><tbody>
+          ${STATE.docsRH.map(d=>{const sal=getSal(d.salId);return`<tr>
+            <td style="font-weight:600;">${sal?.nom||'—'}</td><td>${utils.esc(d.type)}</td>
+            <td>${fmtD(d.date)}</td><td style="color:var(--af);font-size:11.5px;">${d.notes||'—'}</td>
+            <td><button class="bd2" onclick="RH.deleteDocRH(${d.id})">✕</button></td>
+          </tr>`;}).join('')}</tbody></table></div>`;
+      },
+
+      /* ── Sous-traitants ── */
+      renderSousTraitants() {
+        const el=$('sst-grid'); if(!el)return;
+        const pill=$('pill-sst');
+        if(pill)pill.textContent=STATE.sousTraitants.filter(s=>s.statut==='actif').length;
+        el.innerHTML=STATE.sousTraitants.map(s=>{
+          const ae=s.assuranceExp?daysUntil(s.assuranceExp):null;
+          const aW=ae!==null&&ae<60, aE=ae!==null&&ae<0;
+          return `<div class="rh-sal-card" onclick="RH.openDetailSST(${s.id})">
+            <div class="rh-sal-card-bar" style="background:${s.couleur};"></div>
+            <div class="rh-sal-card-body">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  ${UI.avatar(s.initiales,s.couleur,'44px')}
+                  <div>
+                    <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;">${utils.esc(s.nom)}</div>
+                    <div style="font-size:11.5px;color:var(--bc);font-weight:500;">${utils.esc(s.specialite)}</div>
+                    <div style="font-size:11px;color:var(--af);margin-top:2px;">Contact : ${utils.esc(s.contact)}</div>
+                  </div>
+                </div>
+                ${s.statut==='actif'?'<span class="sbadge s-vl">✓ Actif</span>':'<span class="sbadge s-rl">✗ Inactif</span>'}
+              </div>
+              <div class="rh-sal-card-meta">
+                <div class="rh-sal-meta-item">📞 <strong>${s.tel||'—'}</strong></div>
+                <div class="rh-sal-meta-item">💰 <strong>${s.tauxHoraire} €/h</strong></div>
+                <div class="rh-sal-meta-item">🏆 <strong>${s.rge!=='Non'?s.rge:'Non RGE'}</strong></div>
+                <div class="rh-sal-meta-item" style="${aE?'color:var(--rll)':aW?'color:var(--jn)':''}">
+                  🛡 ${s.assuranceExp?fmtD(s.assuranceExp):'—'}${aE?' ⚠ EXPIRÉE':aW?` (${ae}j)`:''}
+                </div>
+              </div>
+            </div>
+            <div class="rh-sal-card-footer">
+              <span style="font-size:11px;color:var(--af);">SIRET : ${s.siret||'—'}</span>
+              <div style="display:flex;gap:5px;" onclick="event.stopPropagation()">
+                <button class="bg2" onclick="RH.editSST(${s.id})">✎</button>
+                <button class="bd2" onclick="RH.deleteSST(${s.id})">🗑</button>
+              </div>
+            </div>
+          </div>`;
+        }).join('')||'<div class="empty">Aucun sous-traitant.</div>';
+      },
+
+      /* ── Détail Salarié ── */
+      openDetail(id) {
+        const s=getSal(id); if(!s)return;
+        const fSal=STATE.formations.filter(f=>f.salId===id);
+        const aSal=STATE.absences.filter(a=>a.salId===id);
+        const hSal=STATE.heures.filter(h=>h.salId===id);
+        const dSal=STATE.docsRH.filter(d=>d.salId===id);
+        const cr=s.congesAcquis-s.congesPris,rr=s.rttAcquis-s.rttPris;
+        const totH=hSal.reduce((s,h)=>s+h.heures,0);
+        $('detail-content').innerHTML=`
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:14px;">
+              ${UI.avatar(s.initiales,s.couleur,'56px')}
+              <div>
+                <div style="font-family:'Syne',sans-serif;font-size:21px;font-weight:800;">${utils.esc(s.nom)}</div>
+                <div style="color:var(--bc);font-size:13px;font-weight:500;">${utils.esc(s.poste)}</div>
+                <div style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap;">${badgeSal(s)} ${badgeStatut(s)}</div>
+              </div>
+            </div>
+            <button class="bou" onclick="RH.editSalarie(${s.id})">✎ Modifier</button>
+          </div>
+          <div class="tabs">
+            <button class="tab active" onclick="RH._switchTab('infos',this)">👤 Infos</button>
+            <button class="tab" onclick="RH._switchTab('conges',this)">🏖 Congés (${cr}j)</button>
+            <button class="tab" onclick="RH._switchTab('heures',this)">⏱ Heures (${totH}h)</button>
+            <button class="tab" onclick="RH._switchTab('formations',this)">🎓 Formations (${fSal.length})</button>
+            <button class="tab" onclick="RH._switchTab('docs',this)">📋 Docs (${dSal.length})</button>
+          </div>
+          <div class="tc active" id="tp-infos">
+            <div class="dual">
+              <div class="sec" style="margin-bottom:0;"><h3>Informations personnelles</h3>
+                <table class="dtb">
+                  <tr><td>Naissance</td><td>${fmtD(s.dateNaissance)}</td></tr>
+                  <tr><td>Téléphone</td><td><a href="tel:${s.tel}" style="color:var(--bc);">${s.tel||'—'}</a></td></tr>
+                  <tr><td>Email</td><td>${s.email||'—'}</td></tr>
+                  <tr><td>Date d'entrée</td><td>${fmtD(s.dateEntree)}</td></tr>
+                </table>
+              </div>
+              <div class="sec" style="margin-bottom:0;"><h3>Contrat & Rémunération</h3>
+                <table class="dtb">
+                  <tr><td>Type contrat</td><td style="font-weight:600;">${utils.esc(s.contrat)}</td></tr>
+                  <tr><td>Salaire brut</td><td style="font-family:'Syne',sans-serif;font-weight:800;color:var(--or);">${s.salaireBrut.toLocaleString('fr-FR')} €/mois</td></tr>
+                  <tr><td>Heures/semaine</td><td>${s.heuresSemaine}h</td></tr>
+                  <tr><td>Coût chargé (~45%)</td><td style="color:var(--bc);">~${Math.round(s.salaireBrut*1.45).toLocaleString('fr-FR')} €/mois</td></tr>
+                </table>
+              </div>
+            </div>
+            ${s.notes?`<div class="sec" style="margin-top:13px;"><h3>Notes</h3><p style="font-size:13px;color:var(--am);line-height:1.6;">${utils.esc(s.notes)}</p></div>`:''}
+          </div>
+          <div class="tc" id="tp-conges"><div class="sec">
+            <div class="dual" style="margin-bottom:14px;">
+              <div class="kpi co"><div class="kl">Congés restants</div><div class="kv">${cr}j</div><div class="ks">${s.congesPris}j pris / ${s.congesAcquis}j acquis</div></div>
+              <div class="kpi cb"><div class="kl">RTT restants</div><div class="kv">${rr}j</div><div class="ks">${s.rttPris}j pris / ${s.rttAcquis}j acquis</div></div>
+            </div>
+            ${aSal.length===0?'<div class="empty">Aucune absence.</div>'
+              :`<table class="htab"><thead><tr><th>Type</th><th>Du</th><th>Au</th><th>Jours</th><th>Motif</th></tr></thead><tbody>
+                ${aSal.map(a=>`<tr><td>${ABS_LABELS[a.type]||a.type}</td><td>${fmtD(a.debut)}</td><td>${fmtD(a.fin)}</td><td class="num">${a.jours}j</td><td style="color:var(--af);">${a.motif||'—'}</td></tr>`).join('')}
+              </tbody></table>`}
+          </div></div>
+          <div class="tc" id="tp-heures"><div class="sec">
+            ${hSal.length===0?'<div class="empty">Aucune heure saisie.</div>'
+              :`<table class="htab"><thead><tr><th>Mois</th><th>Chantier</th><th>Heures</th></tr></thead><tbody>
+                ${hSal.map(h=>`<tr><td>${MOIS[h.mois]}</td><td>${h.chantier}</td><td class="num">${h.heures}h</td></tr>`).join('')}
+                <tr class="total-row"><td colspan="2">TOTAL</td><td class="num">${totH}h</td></tr>
+              </tbody></table>`}
+            <div style="margin-top:12px;font-size:12px;color:var(--af);">Coût estimé : <strong style="color:var(--or);">${fmt(totH*45)}</strong></div>
+          </div></div>
+          <div class="tc" id="tp-formations"><div class="sec">
+            ${fSal.length===0?'<div class="empty">Aucune formation.</div>'
+              :`<table class="htab"><thead><tr><th>Formation</th><th>Date</th><th>Expiration</th><th>Statut</th></tr></thead><tbody>
+                ${fSal.map(f=>{const j=daysUntil(f.expiration);const ec=j!==null&&j<0?'var(--rll)':j!==null&&j<60?'var(--jn)':'var(--vll)';return`<tr>
+                  <td style="font-weight:600;">${utils.esc(f.titre)}</td><td>${fmtD(f.date)}</td>
+                  <td style="color:${ec};">${fmtD(f.expiration)}</td>
+                  <td>${f.statut==='expire'?'<span class="sbadge s-rl">🔴 Expirée</span>':'<span class="sbadge s-vl">✅ Valide</span>'}</td>
+                </tr>`;}).join('')}
+              </tbody></table>`}
+          </div></div>
+          <div class="tc" id="tp-docs"><div class="sec">
+            ${dSal.length===0?'<div class="empty">Aucun document RH.</div>'
+              :`<table class="htab"><thead><tr><th>Type</th><th>Date</th><th>Notes</th></tr></thead><tbody>
+                ${dSal.map(d=>`<tr><td style="font-weight:600;">${utils.esc(d.type)}</td><td>${fmtD(d.date)}</td><td style="color:var(--af);">${d.notes||'—'}</td></tr>`).join('')}
+              </tbody></table>`}
+          </div></div>`;
+        nav.go('detail');
+      },
+
+      _switchTab(name,btn) {
+        utils.qa('.tc').forEach(p=>p.classList.remove('active'));
+        utils.qa('.tab').forEach(b=>b.classList.remove('active'));
+        $(`tp-${name}`)?.classList.add('active');
+        btn.classList.add('active');
+      },
+
+      /* ── Détail SST ── */
+      openDetailSST(id) {
+        const s=STATE.sousTraitants.find(x=>x.id===id); if(!s)return;
+        const ae=s.assuranceExp?daysUntil(s.assuranceExp):null;
+        const ac=ae===null?'var(--af)':ae<0?'var(--rll)':ae<60?'var(--jn)':'var(--vll)';
+        const hSST=STATE.heures.filter(h=>h.salId===id);
+        const totH=hSST.reduce((s,h)=>s+h.heures,0);
+
+        // Blocs conditionnels (évite les backticks imbriqués dans le template)
+        const interventionsHtml = totH > 0
+          ? '<div class="sec"><h3>⏱ Interventions enregistrées</h3>'
+            + '<table class="htab"><thead><tr><th>Mois</th><th>Chantier</th><th>Heures</th><th>Montant estimé</th></tr></thead><tbody>'
+            + hSST.map(h => '<tr><td>' + MOIS[h.mois] + '</td><td>' + h.chantier + '</td>'
+              + '<td class="num">' + h.heures + 'h</td>'
+              + '<td class="num">' + fmt(h.heures * s.tauxHoraire) + '</td></tr>').join('')
+            + '<tr class="total-row"><td colspan="2">TOTAL</td>'
+            + '<td class="num">' + totH + 'h</td>'
+            + '<td class="num">' + fmt(totH * s.tauxHoraire) + '</td></tr>'
+            + '</tbody></table></div>'
+          : '';
+        const notesHtml = s.notes
+          ? '<div class="sec"><h3>Notes</h3><p style="font-size:13px;color:var(--am);line-height:1.6;">' + utils.esc(s.notes) + '</p></div>'
+          : '';
+        const assExp_txt = ae !== null && ae < 0 ? ' ⚠' : ae !== null && ae < 60 ? ' (' + ae + 'j)' : '';
+
+        $('detail-sst-content').innerHTML = `
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:14px;">
+              ${UI.avatar(s.initiales,s.couleur,'56px')}
+              <div>
+                <div style="font-family:'Syne',sans-serif;font-size:21px;font-weight:800;">${utils.esc(s.nom)}</div>
+                <div style="color:var(--bc);font-size:13px;font-weight:500;">${utils.esc(s.specialite)}</div>
+                <div style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap;">
+                  ${s.statut==='actif'?'<span class="sbadge s-vl">✓ Actif</span>':'<span class="sbadge s-rl">✗ Inactif</span>'}
+                  ${s.rge!=='Non'?'<span class="sbadge s-vl">✓ RGE</span>':''}
+                  ${ae!==null&&ae<0?'<span class="sbadge s-rl">⚠ Assurance expirée</span>':''}
+                  ${ae!==null&&ae>=0&&ae<60?`<span class="sbadge s-jn">Assurance dans ${ae}j</span>`:''}
+                </div>
+              </div>
+            </div>
+            <button class="bou" onclick="RH.editSST(${s.id})">✎ Modifier</button>
+          </div>
+          <div class="dual">
+            <div class="sec" style="margin-bottom:0;"><h3>Coordonnées & Identification</h3>
+              <table class="dtb">
+                <tr><td>Contact</td><td style="font-weight:600;">${utils.esc(s.contact)}</td></tr>
+                <tr><td>Téléphone</td><td><a href="tel:${s.tel}" style="color:var(--bc);">${s.tel||'—'}</a></td></tr>
+                <tr><td>Email</td><td>${s.email?'<a href="mailto:'+s.email+'" style="color:var(--bc);">'+s.email+'</a>':'—'}</td></tr>
+                <tr><td>SIRET</td><td>${s.siret||'—'}</td></tr>
+                <tr><td>TVA intra</td><td>${s.tva_intra||'—'}</td></tr>
+              </table>
+            </div>
+            <div class="sec" style="margin-bottom:0;"><h3>Conditions & Conformité</h3>
+              <table class="dtb">
+                <tr><td>Taux horaire</td><td style="font-family:'Syne',sans-serif;font-weight:800;color:var(--or);">${s.tauxHoraire} €/h HT</td></tr>
+                <tr><td>Certification RGE</td><td style="color:${s.rge!=='Non'?'var(--vll)':'var(--af)'};">${utils.esc(s.rge)}</td></tr>
+                <tr><td>Assurance RC Pro</td><td>${s.assurance||'—'}</td></tr>
+                <tr><td>Expiration assurance</td><td style="font-weight:600;color:${ac};">${fmtD(s.assuranceExp)}${assExp_txt}</td></tr>
+              </table>
+            </div>
+          </div>
+          ${interventionsHtml}
+          ${notesHtml}`;
+        nav.go('detail-sst');
+      },
+
+      /* ── Modals ── */
+      openModal(type) {
+        STATE.modalType=type; STATE.editId=null;
+        const salOpts=()=>STATE.salaries.filter(s=>s.statut==='actif').map(s=>`<option value="${s.id}">${utils.esc(s.nom)}</option>`).join('');
+        const allSalOpts=()=>STATE.salaries.map(s=>`<option value="${s.id}">${utils.esc(s.nom)}</option>`).join('');
+        const moisOpts=()=>MOIS.map((m,i)=>`<option value="${i}" ${i===3?'selected':''}>${m}</option>`).join('');
+        const chOpts=()=>CHANTIERS.map(c=>`<option value="${c}">${c}</option>`).join('');
+        const bodies={
+          salarie:{title:'Nouveau salarié',body:`<div class="fg">
+            <div class="f1"><label class="fl">Prénom *</label><input class="fi" id="sf-prenom" type="text"></div>
+            <div class="f1"><label class="fl">Nom *</label><input class="fi" id="sf-nom" type="text"></div>
+            <div class="f1 full"><label class="fl">Poste</label><input class="fi" id="sf-poste" type="text" placeholder="Maçon qualifié N3P1"></div>
+            <div class="f1"><label class="fl">Contrat</label><select class="fi" id="sf-contrat"><option>CDI</option><option>CDD</option><option>Apprentissage</option><option>Intérimaire</option></select></div>
+            <div class="f1"><label class="fl">Date entrée</label><input class="fi" id="sf-entree" type="date"></div>
+            <div class="f1"><label class="fl">Date naissance</label><input class="fi" id="sf-naissance" type="date"></div>
+            <div class="f1"><label class="fl">Téléphone</label><input class="fi" id="sf-tel" type="tel"></div>
+            <div class="f1"><label class="fl">Email</label><input class="fi" id="sf-email" type="email"></div>
+            <div class="f1"><label class="fl">Salaire brut (€/mois)</label><input class="fi" id="sf-salaire" type="number" min="0" step="50"></div>
+            <div class="f1"><label class="fl">Heures/semaine</label><input class="fi" id="sf-heures" type="number" value="39"></div>
+            <div class="f1"><label class="fl">Congés acquis (j/an)</label><input class="fi" id="sf-conges" type="number" value="25"></div>
+            <div class="f1"><label class="fl">RTT acquis (j/an)</label><input class="fi" id="sf-rtt" type="number" value="6"></div>
+            <div class="f1 full"><label class="fl">Notes</label><textarea class="fi fi-area" id="sf-notes"></textarea></div>
+          </div>`},
+          absence:{title:'Nouvelle absence / Congé',body:`<div class="fg">
+            <div class="f1 full"><label class="fl">Salarié *</label><select class="fi" id="af-sal">${salOpts()}</select></div>
+            <div class="f1"><label class="fl">Type</label><select class="fi" id="af-type"><option value="conge">Congés payés</option><option value="rtt">RTT</option><option value="maladie">Maladie</option><option value="formation">Formation</option><option value="autre">Autre</option></select></div>
+            <div class="f1"><label class="fl">Nombre de jours</label><input class="fi" id="af-jours" type="number" min="0.5" step="0.5" value="1"></div>
+            <div class="f1"><label class="fl">Date début *</label><input class="fi" id="af-debut" type="date"></div>
+            <div class="f1"><label class="fl">Date fin *</label><input class="fi" id="af-fin" type="date"></div>
+            <div class="f1 full"><label class="fl">Motif</label><input class="fi" id="af-motif" type="text"></div>
+          </div>`},
+          heures:{title:'Saisir des heures',body:`<div class="fg">
+            <div class="f1 full"><label class="fl">Salarié *</label><select class="fi" id="hf-sal">${salOpts()}</select></div>
+            <div class="f1"><label class="fl">Mois</label><select class="fi" id="hf-mois">${moisOpts()}</select></div>
+            <div class="f1"><label class="fl">Semaine</label><select class="fi" id="hf-sem">${[1,2,3,4,5].map(s=>`<option value="${s}">Semaine ${s}</option>`).join('')}</select></div>
+            <div class="f1 full"><label class="fl">Chantier</label><select class="fi" id="hf-chantier">${chOpts()}</select></div>
+            <div class="f1"><label class="fl">Heures travaillées</label><input class="fi" id="hf-heures" type="number" min="0" max="60" step="0.5" value="39"></div>
+          </div>`},
+          formation:{title:'Formation / Habilitation',body:`<div class="fg">
+            <div class="f1 full"><label class="fl">Salarié *</label><select class="fi" id="ff-sal">${salOpts()}</select></div>
+            <div class="f1 full"><label class="fl">Titre *</label><input class="fi" id="ff-titre" type="text" placeholder="Ex: CACES R482 Cat. A"></div>
+            <div class="f1"><label class="fl">Date de formation</label><input class="fi" id="ff-date" type="date"></div>
+            <div class="f1"><label class="fl">Date d'expiration</label><input class="fi" id="ff-expiration" type="date"></div>
+            <div class="f1"><label class="fl">Organisme</label><input class="fi" id="ff-organisme" type="text" placeholder="AFPA, INRS..."></div>
+            <div class="f1"><label class="fl">Coût (€)</label><input class="fi" id="ff-cout" type="number" min="0" value="0"></div>
+          </div>`},
+          'sous-traitant':{title:'Nouveau sous-traitant',body:this._sstModalBody(null)},
+          document:{title:'Document RH',body:`<div class="fg">
+            <div class="f1 full"><label class="fl">Salarié *</label><select class="fi" id="df-sal">${allSalOpts()}</select></div>
+            <div class="f1 full"><label class="fl">Type</label><select class="fi" id="df-type"><option>Contrat de travail</option><option>Avenant contrat</option><option>Visite médicale</option><option>Bulletin de paie</option><option>Attestation employeur</option><option>Fiche de poste</option><option>Autre</option></select></div>
+            <div class="f1"><label class="fl">Date</label><input class="fi" id="df-date" type="date"></div>
+            <div class="f1"><label class="fl">Notes</label><input class="fi" id="df-notes" type="text"></div>
+          </div>`},
+        };
+        const cfg=bodies[type]||bodies.salarie;
+        modal.open({ title:cfg.title, body:cfg.body, saveLabel:'💾 Enregistrer', onSave:()=>this.saveModal() });
+      },
+
+      editSalarie(id) {
+        const s=getSal(id); if(!s)return;
+        STATE.modalType='salarie'; STATE.editId=id;
+        this.openModal('salarie');
+        setTimeout(()=>{
+          const set=(id,val)=>{const el=$(id);if(el)el.value=val||'';};
+          set('sf-prenom',s.prenom);set('sf-nom',s.nom);set('sf-poste',s.poste);
+          set('sf-contrat',s.contrat);set('sf-entree',s.dateEntree);set('sf-naissance',s.dateNaissance);
+          set('sf-tel',s.tel);set('sf-email',s.email);set('sf-salaire',s.salaireBrut);
+          set('sf-heures',s.heuresSemaine);set('sf-conges',s.congesAcquis);set('sf-rtt',s.rttAcquis);
+          set('sf-notes',s.notes);
+          const mt=$('mTitle');if(mt)mt.textContent=`Modifier — ${s.nom}`;
+        },50);
+      },
+
+      saveModal() {
+        const t=STATE.modalType;
+        const g=id=>$(id)?.value?.trim?.()??$(id)?.value??'';
+        const gi=id=>parseInt($(id)?.value)||0;
+        const gf=id=>parseFloat($(id)?.value)||0;
+        if(t==='salarie'){
+          const prenom=g('sf-prenom'),nom=g('sf-nom');
+          if(!prenom||!nom){toast.show('Prénom et Nom obligatoires','err');return;}
+          const data={prenom,nom,poste:g('sf-poste'),contrat:g('sf-contrat'),
+            dateEntree:g('sf-entree'),dateNaissance:g('sf-naissance'),
+            tel:g('sf-tel'),email:g('sf-email'),salaireBrut:gi('sf-salaire'),
+            heuresSemaine:gi('sf-heures')||39,congesAcquis:gi('sf-conges')||25,
+            rttAcquis:gi('sf-rtt')||6,notes:g('sf-notes'),statut:'actif'};
+          if(STATE.editId){
+            const s=STATE.salaries.find(x=>x.id===STATE.editId);
+            if(s){data.congesPris=s.congesPris;data.rttPris=s.rttPris;data.couleur=s.couleur;
+              data.initiales=(prenom[0]+(nom[0]||'')).toUpperCase();Object.assign(s,data);}
+            toast.show('Salarié mis à jour ✓','ok');
+          } else {
+            STATE.salaries.push({id:++STATE.nextId,...data,congesPris:0,rttPris:0,
+              couleur:COLORS_SAL[STATE.salaries.length%COLORS_SAL.length],
+              initiales:(prenom[0]+(nom[0]||'')).toUpperCase()});
+            toast.show('Salarié ajouté ✓','ok');
+          }
+        } else if(t==='absence'){
+          const salId=gi('af-sal'),debut=g('af-debut'),fin=g('af-fin');
+          if(!salId||!debut||!fin){toast.show('Salarié, début et fin obligatoires','err');return;}
+          if(fin<debut){toast.show('La fin doit être après le début','err');return;}
+          const jours=gf('af-jours')||1,type=g('af-type');
+          const s=STATE.salaries.find(x=>x.id===salId);
+          if(s){if(type==='conge')s.congesPris=Math.min(s.congesAcquis,(s.congesPris||0)+jours);
+                if(type==='rtt')s.rttPris=Math.min(s.rttAcquis,(s.rttPris||0)+jours);}
+          STATE.absences.push({id:++STATE.nextId,salId,type,debut,fin,jours,motif:g('af-motif')});
+          toast.show('Absence enregistrée ✓','ok');
+        } else if(t==='heures'){
+          const salId=gi('hf-sal'),h=gf('hf-heures');
+          if(!salId||h<=0){toast.show('Salarié et heures obligatoires','err');return;}
+          STATE.heures.push({id:++STATE.nextId,salId,mois:gi('hf-mois'),chantier:g('hf-chantier'),heures:h,semaine:gi('hf-sem')||1});
+          toast.show('Heures enregistrées ✓','ok');
+        } else if(t==='formation'){
+          const salId=gi('ff-sal'),titre=g('ff-titre');
+          if(!salId||!titre){toast.show('Salarié et titre obligatoires','err');return;}
+          const exp=g('ff-expiration');const j=exp?daysUntil(exp):null;
+          STATE.formations.push({id:++STATE.nextId,salId,titre,date:g('ff-date'),expiration:exp,
+            organisme:g('ff-organisme'),statut:j!==null&&j<0?'expire':'valide',cout:gi('ff-cout')});
+          toast.show('Formation ajoutée ✓','ok');
+        } else if(t==='document'){
+          const salId=gi('df-sal'),type=g('df-type');
+          if(!salId||!type){toast.show('Salarié et type obligatoires','err');return;}
+          STATE.docsRH.push({id:++STATE.nextId,salId,type,date:g('df-date'),notes:g('df-notes')});
+          toast.show('Document ajouté ✓','ok');
+        } else if(t==='sous-traitant'){
+          if(!this._saveSST())return;
+        }
+        modal.close();
+        persistence.mark();
+        this.refreshAll();
+      },
+
+      /* ── Suppressions ── */
+      deleteSalarie(id) {
+        const s=getSal(id);
+        if(!confirm(`Supprimer "${s?.nom}" et toutes ses données RH ?`))return;
+        STATE.salaries=STATE.salaries.filter(x=>x.id!==id);
+        STATE.absences=STATE.absences.filter(a=>a.salId!==id);
+        STATE.heures=STATE.heures.filter(h=>h.salId!==id);
+        STATE.formations=STATE.formations.filter(f=>f.salId!==id);
+        STATE.docsRH=STATE.docsRH.filter(d=>d.salId!==id);
+        persistence.mark();this.refreshAll();toast.show('Salarié supprimé','sv');
+        if(nav.current==='detail')nav.back();
+      },
+      deleteAbsence(id){if(!confirm('Supprimer cette absence ?'))return;STATE.absences=STATE.absences.filter(x=>x.id!==id);persistence.mark();this.renderConges();},
+      deleteHeures(id){if(!confirm('Supprimer ces heures ?'))return;STATE.heures=STATE.heures.filter(x=>x.id!==id);persistence.mark();this.renderHeures();},
+      deleteFormation(id){if(!confirm('Supprimer cette formation ?'))return;STATE.formations=STATE.formations.filter(x=>x.id!==id);persistence.mark();this.renderFormations();},
+      deleteDocRH(id){if(!confirm('Supprimer ce document ?'))return;STATE.docsRH=STATE.docsRH.filter(x=>x.id!==id);persistence.mark();this.renderDocumentsRH();},
+
+      /* ── SST CRUD ── */
+      _sstModalBody(s) {
+        const v=k=>s?(s[k]??''):'';
+        return `<div class="fg">
+          <div class="f1 full"><label class="fl">Raison sociale *</label><input class="fi" id="sst-nom" type="text" placeholder="Ex: Charpente Bois Loire" value="${utils.esc(v('nom'))}"></div>
+          <div class="f1"><label class="fl">Contact (nom)</label><input class="fi" id="sst-contact" type="text" value="${utils.esc(v('contact'))}"></div>
+          <div class="f1"><label class="fl">Téléphone</label><input class="fi" id="sst-tel" type="tel" value="${utils.esc(v('tel'))}"></div>
+          <div class="f1"><label class="fl">Email</label><input class="fi" id="sst-email" type="email" value="${utils.esc(v('email'))}"></div>
+          <div class="f1 full"><label class="fl">Spécialité *</label><input class="fi" id="sst-specialite" type="text" value="${utils.esc(v('specialite'))}"></div>
+          <div class="f1"><label class="fl">SIRET</label><input class="fi" id="sst-siret" type="text" value="${utils.esc(v('siret'))}"></div>
+          <div class="f1"><label class="fl">TVA intracommunautaire</label><input class="fi" id="sst-tva" type="text" value="${utils.esc(v('tva_intra'))}"></div>
+          <div class="f1"><label class="fl">Taux horaire HT (€)</label><input class="fi" id="sst-taux" type="number" min="0" step="1" value="${v('tauxHoraire')||55}"></div>
+          <div class="f1"><label class="fl">Statut</label><select class="fi" id="sst-statut"><option value="actif" ${(!s||s.statut==='actif')?'selected':''}>✓ Actif</option><option value="inactif" ${s&&s.statut==='inactif'?'selected':''}>✗ Inactif</option></select></div>
+          <div class="f1"><label class="fl">Certification RGE</label><input class="fi" id="sst-rge" type="text" value="${utils.esc(v('rge')||'Non')}"></div>
+          <div class="f1 full"><label class="fl">Assurance RC Pro</label><input class="fi" id="sst-assurance" type="text" value="${utils.esc(v('assurance'))}"></div>
+          <div class="f1"><label class="fl">Expiration assurance</label><input class="fi" id="sst-assurance-exp" type="date" value="${v('assuranceExp')}"></div>
+          <div class="f1 full"><label class="fl">Notes</label><textarea class="fi fi-area" id="sst-notes">${utils.esc(v('notes'))}</textarea></div>
+        </div>`;
+      },
+      editSST(id) {
+        const s=STATE.sousTraitants.find(x=>x.id===id); if(!s)return;
+        STATE.modalType='sous-traitant'; STATE.editId=id;
+        modal.open({title:`Modifier — ${s.nom}`,body:this._sstModalBody(s),saveLabel:'💾 Enregistrer',onSave:()=>this.saveModal()});
+      },
+      _saveSST() {
+        const g=id=>$(id)?.value?.trim?.()??'';
+        const gi=id=>parseInt($(id)?.value)||0;
+        const nom=g('sst-nom'),specialite=g('sst-specialite');
+        if(!nom||!specialite){toast.show('Raison sociale et spécialité obligatoires','err');return false;}
+        const data={nom,specialite,contact:g('sst-contact'),tel:g('sst-tel'),email:g('sst-email'),
+          siret:g('sst-siret'),tva_intra:g('sst-tva'),tauxHoraire:gi('sst-taux')||55,
+          statut:g('sst-statut'),rge:g('sst-rge')||'Non',assurance:g('sst-assurance'),
+          assuranceExp:g('sst-assurance-exp'),notes:g('sst-notes')};
+        if(STATE.editId){
+          const s=STATE.sousTraitants.find(x=>x.id===STATE.editId);
+          if(s){data.couleur=s.couleur;data.initiales=s.initiales;Object.assign(s,data);}
+          toast.show('Sous-traitant mis à jour ✓','ok');
+        } else {
+          const initiales=(nom.split(' ').map(w=>w[0]).join('').slice(0,2)).toUpperCase();
+          STATE.sousTraitants.push({id:++STATE.nextIdSST,...data,couleur:COLORS_SST[STATE.sousTraitants.length%COLORS_SST.length],initiales});
+          toast.show('Sous-traitant ajouté ✓','ok');
+        }
+        return true;
+      },
+      deleteSST(id) {
+        const s=STATE.sousTraitants.find(x=>x.id===id);
+        if(!confirm(`Supprimer "${s?.nom}" ?`))return;
+        STATE.sousTraitants=STATE.sousTraitants.filter(x=>x.id!==id);
+        persistence.mark();this.renderSousTraitants();toast.show('Sous-traitant supprimé','sv');
+        if(nav.current==='detail-sst')nav.go('sous-traitants');
+      },
+
+      refreshAll() {
+        const cur=nav.current;
+        this.renderDashboard();
+        if(cur==='salaries')       this.renderSalaries();
+        if(cur==='planning')       this.renderPlanning();
+        if(cur==='conges')         this.renderConges();
+        if(cur==='heures')         this.renderHeures();
+        if(cur==='formations')     this.renderFormations();
+        if(cur==='documents')      this.renderDocumentsRH();
+        if(cur==='sous-traitants') this.renderSousTraitants();
+      },
+    };
+
+    /* ════════════════════════════════════════════════════════════════
+       NAVIGATION
+       Les vues utilisent id="vc-view-*" — nav.go() cherche aussi ce préfixe
+    ════════════════════════════════════════════════════════════════ */
+    // Override nav.go pour supporter vc-view-* (vues RH)
+    const _navGo = nav.go.bind(nav);
+    nav.go = function(viewId) {
+      // Essai standard id="view-*"
+      const std = utils.$('view-' + viewId);
+      if (std) { _navGo(viewId); return; }
+      // Fallback : id="vc-view-*"
+      utils.qa('.view, .vc-view').forEach(v=>v.classList.remove('active'));
+      utils.qa('.ni, .vc-nav-item').forEach(n=>n.classList.remove('active'));
+      const el=utils.$('vc-view-'+viewId), navEl=utils.$('nav-'+viewId);
+      if(el)el.classList.add('active');
+      if(navEl)navEl.classList.add('active');
+      VilarCore.ui.closeSidebar();
+      nav._previous = nav._current;
+      nav._current  = viewId;
+      // Rendus
+      const renders = {
+        dashboard:      ()=>RH.renderDashboard(),
+        salaries:       ()=>RH.renderSalaries(),
+        planning:       ()=>RH.renderPlanning(),
+        conges:         ()=>RH.renderConges(),
+        heures:         ()=>RH.renderHeures(),
+        formations:     ()=>RH.renderFormations(),
+        documents:      ()=>RH.renderDocumentsRH(),
+        'sous-traitants':()=>RH.renderSousTraitants(),
+        'detail':       ()=>{},
+        'detail-sst':   ()=>{},
+      };
+      renders[viewId]?.();
+    };
+
+    /* ════════════════════════════════════════════════════════════════
+       MONTAGE UI
+    ════════════════════════════════════════════════════════════════ */
+    VilarUI.mountModule({
+      sidebar:{
+        moduleName:'RH & Équipe 2026',moduleVersion:'v2.0 — IndexedDB + PWA',
+        navItems:[
+          {type:'section',label:'Tableau de bord'},
+          {id:'dashboard',icon:'⊞',label:'Vue d\'ensemble'},
+          {type:'section',label:'Équipe'},
+          {id:'salaries',icon:'👤',label:'Salariés',           pill:0,pillId:'pill-salaries',pillClass:'pb'},
+          {id:'planning',icon:'📅',label:'Planning mensuel'},
+          {id:'conges',  icon:'🏖',label:'Congés & Absences',  pill:0,pillId:'pill-conges',  pillClass:'pj'},
+          {id:'heures',  icon:'⏱',label:'Heures & Chantiers'},
+          {id:'formations',icon:'🎓',label:'Formations',        pill:0,pillId:'pill-formations',pillClass:'pr'},
+          {id:'documents',icon:'📋',label:'Documents RH'},
+          {type:'section',label:'Partenaires'},
+          {id:'sous-traitants',icon:'🔧',label:'Sous-traitants',pill:0,pillId:'pill-sst',pillClass:'pv'},
+        ],
+        dataActions:[
+          {label:'↓ Export JSON',onClick:"VilarCore.io.exportJSON(App.getData(),'RH')"},
+          {label:'↑ Importer',   onClick:"VilarCore.io.triggerImport(d=>{App.applyData(d);VilarCore.persistence.mark();RH.refreshAll();},App.validateImport)"},
+          {label:'🖨 Imprimer',  onClick:'window.print()'},
+        ],
+      },
+      header:{
+        title:'RH & Équipe',year:'2026',
+        actions:[
+          {label:'💾',        class:'sec',onClick:"VilarCore.persistence.save(false)"},
+          {label:'+ Salarié',             onClick:"RH.openModal('salarie')"},
+        ],
+        avatar:'JV',
+      },
+      bannerModuleName:'RH',
+    });
+
+    window.RH  = RH;
+    window.App = App;
+
+    /* ════════════════════════════════════════════════════════════════
+       INITIALISATION
+    ════════════════════════════════════════════════════════════════ */
+    async function initApp() {
+      try {
+        let saved = await db.getModule(MODULE_KEY);
+        if (!saved) {
+          // Migration v1 → v2 (VilarDS_RH_DB)
+          saved = await db.getExternal(LEGACY_DB, LEGACY_STORE, LEGACY_KEY);
+          if (saved) toast.show('Migration RH v1 → v2 ✓', 'info', 3000);
+        }
+        if (saved) {
+          App.applyData(saved);
+          VilarCore.saveIndicator.update(false, saved.savedAt ?? null);
+          toast.show('Données RH restaurées ✓', 'ok', 2000);
+        }
+      } catch(e) { console.error('[RH] Chargement:', e); }
+
+      persistence.init(
+        async () => {
+          const p = { ...App.getData(), savedAt:new Date().toISOString(), _version:'2.0' };
+          await db.setModule(MODULE_KEY, p);
+          await bus.publish(MODULE_KEY, App.getSnapshot());
+        },
+        (isDirty, ls) => VilarCore.saveIndicator.update(isDirty, ls),
+      );
+
+      RH.renderDashboard();
+
+      // Activer le nav dashboard
+      const nd = utils.$('nav-dashboard');
+      if (nd) nd.classList.add('active');
+
+      pwa.register();
+      safeIcons();
+
+      setTimeout(() => {
+        utils.qa('.kpi').forEach((el, i) => {
+          el.style.opacity='0'; el.style.transform='translateY(9px)';
+          setTimeout(() => { el.style.transition='all .28s ease'; el.style.opacity='1'; el.style.transform='translateY(0)'; }, i*42+60);
+        });
+      }, 80);
+
+      console.log('%c👷 VilarDS RH v2.0 — PWA Ready', 'color:#A78BFA;font-size:12px;font-weight:bold;');
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+      initApp();
+    }
+
+  })();
+  </script>
+</body>
+</html>

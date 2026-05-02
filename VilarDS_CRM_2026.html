@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1C2B3A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Vilar DS — CRM Clients 2026</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <script src="vilar-core.js"></script>
+  <script src="ui-components.js"></script>
+  <style>
+    /* ── Client cards ── */
+    .crm-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:13px; }
+    .cl-card  { background:var(--bg); border:1px solid var(--bd); border-radius:var(--radius); overflow:hidden; cursor:pointer; transition:var(--trans); }
+    .cl-card:hover { transform:translateY(-2px); border-color:rgba(200,168,75,.28); box-shadow:var(--shadow-lg); }
+    .cl-bar   { height:3px; }
+    .cl-body  { padding:14px; }
+    .cl-name  { font-family:'Syne',sans-serif; font-size:15px; font-weight:800; margin-bottom:3px; }
+    .cl-type  { font-size:10px; color:var(--af); text-transform:uppercase; letter-spacing:1px; font-weight:600; }
+    .cl-meta  { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:10px; }
+    .cl-m     { font-size:11px; color:var(--af); }
+    .cl-foot  { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-top:1px solid var(--bd); }
+    .cl-ca    { font-family:'Syne',sans-serif; font-size:16px; font-weight:800; color:var(--or); }
+    .cl-cal   { font-size:9px; color:var(--af); text-transform:uppercase; letter-spacing:1px; }
+
+    /* ── Détail client (2 colonnes) ── */
+    .cl-detail-grid { display:grid; grid-template-columns:280px 1fr; gap:13px; align-items:start; }
+    .cl-sidebar-card { background:var(--bg); border:1px solid var(--bd); border-radius:var(--radius); padding:16px; }
+    .cl-av-big  { width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Syne',sans-serif; font-size:22px; font-weight:800; margin:0 auto 12px; }
+    .cl-stat-row{ display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--bd); font-size:12px; }
+    .cl-stat-row:last-child { border-bottom:none; }
+    .cl-stat-label { color:var(--af); }
+    .cl-stat-val   { font-weight:700; color:var(--or); font-family:'Syne',sans-serif; }
+
+    /* ── Activités timeline ── */
+    .act-item { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid var(--bd); }
+    .act-item:last-child { border-bottom:none; }
+    .act-dot  { width:10px; height:10px; border-radius:50%; flex-shrink:0; margin-top:4px; }
+    .act-dot.devis    { background:var(--bc); }
+    .act-dot.facture  { background:var(--or); }
+    .act-dot.chantier { background:var(--vll); }
+    .act-dot.contact  { background:#A78BFA; }
+    .act-dot.note     { background:var(--jn); }
+    .act-date { font-size:10px; color:var(--af); width:80px; flex-shrink:0; }
+    .act-txt  { font-size:12px; flex:1; }
+    .act-ref  { font-size:10px; color:var(--bc); margin-top:2px; }
+
+    /* ── Score potentiel ── */
+    .pot-bar  { height:8px; background:rgba(255,255,255,.07); border-radius:4px; overflow:hidden; margin-top:4px; }
+    .pot-fill { height:100%; border-radius:4px; }
+    .pot-fill.low  { background:rgba(248,113,113,.6); }
+    .pot-fill.mid  { background:rgba(234,179,8,.6);  }
+    .pot-fill.high { background:rgba(74,222,128,.6); }
+
+    /* ── Segments badges ── */
+    .seg-vip    { background:rgba(200,168,75,.15);  color:var(--or);  border:1px solid rgba(200,168,75,.3);  }
+    .seg-actif  { background:rgba(74,222,128,.12);  color:var(--vll); border:1px solid rgba(74,222,128,.2);  }
+    .seg-prosp  { background:rgba(74,123,168,.12);  color:var(--bc);  border:1px solid rgba(74,123,168,.2);  }
+    .seg-inact  { background:rgba(122,143,166,.1);  color:var(--af);  border:1px solid rgba(122,143,166,.2); }
+    .seg-rge    { background:rgba(167,139,250,.12); color:#A78BFA;    border:1px solid rgba(167,139,250,.2); }
+
+    /* ── Relance rapide ── */
+    .relance-card { background:rgba(248,113,113,.06); border:1px solid rgba(248,113,113,.2); border-radius:var(--radius); padding:14px; margin-bottom:10px; }
+    .relance-card:last-child { margin-bottom:0; }
+
+    /* ── Kanban pipeline ── */
+    .pipeline { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
+    .pipe-col  { background:var(--bg); border:1px solid var(--bd); border-radius:var(--radius); min-height:200px; }
+    .pipe-hdr  { padding:10px 12px; border-bottom:1px solid var(--bd); font-size:10px; text-transform:uppercase; letter-spacing:1px; font-weight:700; }
+    .pipe-body { padding:8px; }
+    .pipe-card { background:var(--bg2); border:1px solid var(--bd); border-radius:8px; padding:9px 10px; margin-bottom:7px; font-size:11.5px; cursor:pointer; transition:var(--trans); }
+    .pipe-card:hover { border-color:rgba(200,168,75,.25); }
+    .pipe-card-ref { font-size:9.5px; color:var(--af); font-weight:600; }
+    .pipe-card-client { font-weight:600; margin-top:1px; }
+    .pipe-card-val { font-family:'Syne',sans-serif; font-weight:800; color:var(--or); font-size:12px; margin-top:4px; }
+
+    @media (max-width:900px) {
+      .cl-detail-grid { grid-template-columns:1fr; }
+      .pipeline { grid-template-columns:repeat(2,1fr); }
+    }
+    @media (max-width:768px) {
+      .crm-grid { grid-template-columns:1fr; }
+      .pipeline { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="sb-mount"></div>
+  <div id="hdr-mount"></div>
+  <div id="banner-mount"></div>
+  <div id="modal-mount"></div>
+  <input type="file" id="importFile" accept=".json" style="display:none" onchange="CRM.handleImport(this)">
+
+  <main id="main">
+    <!-- DASHBOARD -->
+    <div class="view active" id="view-dashboard">
+      <div style="margin-bottom:16px;">
+        <h1 style="font-family:'Syne',sans-serif;font-size:21px;font-weight:800;">CRM Clients <span style="color:var(--or);">2026</span></h1>
+        <p style="color:var(--af);font-size:12px;margin-top:2px;">Portefeuille client — SARL Vilar DS, Semoy (45400)</p>
+      </div>
+      <div class="kg" id="dashKpis"></div>
+      <div class="dual">
+        <div class="sec" style="margin-bottom:0;"><h3>⭐ Clients VIP (CA > 10 000 €)</h3><div id="dashVip"></div></div>
+        <div class="sec" style="margin-bottom:0;"><h3>🔔 Relances & Suivis</h3><div id="dashRelances"></div></div>
+      </div>
+      <div class="sec"><h3>🏗 Activité récente — 30 derniers jours</h3><div id="dashActivite"></div></div>
+    </div>
+
+    <!-- CLIENTS (liste) -->
+    <div class="view" id="view-clients">
+      <div class="sh"><div class="st">👤 Tous les clients</div><button class="bo" onclick="CRM.openModal()">+ Nouveau client</button></div>
+      <div class="fbar">
+        <button class="fb active" onclick="CRM.filterClients('tous',this)">Tous</button>
+        <button class="fb" onclick="CRM.filterClients('vip',this)">⭐ VIP</button>
+        <button class="fb" onclick="CRM.filterClients('actif',this)">✓ Actifs</button>
+        <button class="fb" onclick="CRM.filterClients('prospect',this)">🎯 Prospects</button>
+        <button class="fb" onclick="CRM.filterClients('rge',this)">🏆 RGE</button>
+        <button class="fb" onclick="CRM.filterClients('inactif',this)">● Inactifs</button>
+      </div>
+      <div class="crm-grid" id="clientsGrid"></div>
+    </div>
+
+    <!-- PIPELINE COMMERCIAL -->
+    <div class="view" id="view-pipeline">
+      <div class="sh"><div class="st">📊 Pipeline commercial</div></div>
+      <div id="pipelineWrap"></div>
+    </div>
+
+    <!-- RELANCES -->
+    <div class="view" id="view-relances">
+      <div class="sh"><div class="st">📞 Relances & Suivis</div><button class="bo" onclick="CRM.openModal('contact')">+ Nouveau contact</button></div>
+      <div id="relancesContent"></div>
+    </div>
+
+    <!-- STATS -->
+    <div class="view" id="view-stats">
+      <div class="sh"><div class="st">📈 Statistiques clients</div></div>
+      <div id="statsContent"></div>
+    </div>
+
+    <!-- DÉTAIL CLIENT -->
+    <div class="view" id="view-detail">
+      <div class="back" onclick="VilarCore.nav.back()">← Retour</div>
+      <div id="detailContent"></div>
+    </div>
+  </main>
+  <script>
+  (function () {
+    'use strict';
+
+    const { db, bus, persistence, toast, modal, nav, io, utils, safeIcons, pwa, MOIS, MA, TODAY } = VilarCore;
+    const $ = utils.$;
+    const fmtD = utils.fmtD;
+    const fmt  = n => Number(n||0).toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:0}) + ' €';
+
+    const MODULE_KEY   = 'crm';
+    const LEGACY_DB    = 'VilarDS_CRM_DB';
+
+    const COLORS = ['#C8A84B','#4A7BA8','#4ADE80','#A78BFA','#F87171','#FB923C','#22D3EE','#EAB308','#F472B6'];
+    const SEG_CSS = { vip:'seg-vip', actif:'seg-actif', prospect:'seg-prosp', inactif:'seg-inact', rge:'seg-rge' };
+    const SEG_LBL = { vip:'⭐ VIP', actif:'✓ Actif', prospect:'🎯 Prospect', inactif:'● Inactif', rge:'🏆 RGE' };
+    const TYPE_LBL = { particulier:'Particulier', professionnel:'Professionnel', collectivite:'Collectivité', promoteur:'Promoteur' };
+    const PIPE_ETAPES = ['prospect','contact','devis','negociation','gagne'];
+    const PIPE_LBL    = { prospect:'Prospect', contact:'Contacté', devis:'Devis envoyé', negociation:'En négo', gagne:'Gagné ✓' };
+    const PIPE_COLORS = { prospect:'#A78BFA', contact:'#4A7BA8', devis:'#C8A84B', negociation:'#FB923C', gagne:'#4ADE80' };
+
+    /* ════════════════════════════════════════════════════════════════
+       DONNÉES PAR DÉFAUT
+    ════════════════════════════════════════════════════════════════ */
+    const DEFAULT_CLIENTS = [
+      { id:1, nom:'M. et Mme Fontaine', prenom:'', type:'particulier', segment:'vip', couleur:'#C8A84B', initiales:'FF',
+        tel:'06 12 34 56 78', email:'fontaine@email.fr', adresse:'12 rue des Lilas, 45160 Olivet',
+        ville:'Olivet', cp:'45160', rge:true, pipe:'gagne',
+        chantiers:['VDS-2026-001'], devis:['DEV-2026-003'], factures:[],
+        caTotal:42000, caEncaisse:0, notes:'Extension R+1 en cours. Très bons payeurs. Potentiellement extension jardin.',
+        tags:['extension','gros-oeuvre','fidele'],
+        contacts:[{d:'15 Avr 2026',type:'chantier',txt:'Visite chantier — avancement 65%'}],
+        origine:'Bouche à oreille', dateCreation:'2026-02-01' },
+      { id:2, nom:'M. Bernard Chavot', prenom:'Bernard', type:'particulier', segment:'actif', couleur:'#4A7BA8', initiales:'BC',
+        tel:'07 65 43 21 09', email:'', adresse:'8 allée des Chênes, 45430 Chécy',
+        ville:'Chécy', cp:'45430', rge:true, pipe:'gagne',
+        chantiers:['VDS-2026-002'], devis:['DEV-2026-004'], factures:['FAC-2026-003'],
+        caTotal:18500, caEncaisse:0, notes:'ITE en cours. Facture impayée — relancer. Isolations combles à proposer.',
+        tags:['rge','ite','isolation'],
+        contacts:[{d:'12 Avr 2026',type:'chantier',txt:'50% pose isolant — RAS'},{d:'01 Avr 2026',type:'contact',txt:'Relance impayé FAC-2026-003'}],
+        origine:'Google', dateCreation:'2026-03-01' },
+      { id:3, nom:'Mme Claire Aubert', prenom:'Claire', type:'particulier', segment:'actif', couleur:'#4ADE80', initiales:'CA',
+        tel:'06 98 76 54 32', email:'', adresse:'34 rue du Moulin, 45430 Mardié',
+        ville:'Mardié', cp:'45430', rge:false, pipe:'gagne',
+        chantiers:['VDS-2026-003'], devis:[], factures:['FAC-2026-004'],
+        caTotal:9800, caEncaisse:2940, notes:'Rénovation SdB en cours. Cliente satisfaite. Potentiel : cuisine à rénover.',
+        tags:['renovation','carrelage'],
+        contacts:[{d:'14 Avr 2026',type:'chantier',txt:'Carrelage terminé. Sanitaires mercredi.'}],
+        origine:'Recommandation', dateCreation:'2026-02-20' },
+      { id:4, nom:'M. et Mme Perrin', prenom:'', type:'particulier', segment:'vip', couleur:'#A78BFA', initiales:'PP',
+        tel:'06 11 22 33 44', email:'', adresse:'ZAC Les Pinsons, La Chapelle-Saint-Mesmin',
+        ville:'La Chapelle-Saint-Mesmin', cp:'45380', rge:false, pipe:'gagne',
+        chantiers:['VDS-2026-004'], devis:[], factures:[],
+        caTotal:68000, caEncaisse:0, notes:'Maison T4 gros œuvre — chantier majeur 2026. Long terme — fidéliser.',
+        tags:['gros-oeuvre','construction-neuve','vip'],
+        contacts:[{d:'20 Avr 2026',type:'chantier',txt:'Terrassement terminé. Fondations S1.'}],
+        origine:'Bouche à oreille', dateCreation:'2026-04-01' },
+      { id:5, nom:'M. Jacques Morin', prenom:'Jacques', type:'particulier', segment:'prospect', couleur:'#FB923C', initiales:'JM',
+        tel:'06 55 66 77 88', email:'', adresse:'27 rue du Bourg, 45140 Ingré',
+        ville:'Ingré', cp:'45140', rge:false, pipe:'devis',
+        chantiers:['VDS-2026-005'], devis:[], factures:[],
+        caTotal:14200, caEncaisse:0, notes:'Chantier planifié mai. Devis accepté. Confirmer date démarrage.',
+        tags:['toiture','planifie'],
+        contacts:[],
+        origine:'Annuaire', dateCreation:'2026-03-15' },
+      { id:6, nom:'M. et Mme Delorme', prenom:'', type:'particulier', segment:'prospect', couleur:'#22D3EE', initiales:'DD',
+        tel:'07 12 34 56 78', email:'', adresse:'15 impasse des Peupliers, 45800 Saint-Jean-de-Braye',
+        ville:'Saint-Jean-de-Braye', cp:'45800', rge:true, pipe:'devis',
+        chantiers:[], devis:['DEV-2026-004'], factures:[],
+        caTotal:22000, caEncaisse:0, notes:'Devis RGE envoyé — attente validation aides CEE + MPR. Relancer si pas de réponse avant 20 mai.',
+        tags:['rge','isolation','ravalement'],
+        contacts:[{d:'05 Avr 2026',type:'devis',txt:'Devis DEV-2026-004 envoyé'}],
+        origine:'Google', dateCreation:'2026-04-01' },
+      { id:7, nom:'M. Arnaud Tessier', prenom:'Arnaud', type:'particulier', segment:'prospect', couleur:'#EAB308', initiales:'AT',
+        tel:'06 78 90 12 34', email:'', adresse:'5 chemin du Pressoir, 45400 Semoy',
+        ville:'Semoy', cp:'45400', rge:false, pipe:'devis',
+        chantiers:[], devis:['DEV-2026-005'], factures:[],
+        caTotal:7800, caEncaisse:0, notes:'Devis en brouillon. Voisin de Julio — traiter en priorité.',
+        tags:['maconnerie','cloture'],
+        contacts:[],
+        origine:'Proximité', dateCreation:'2026-04-10' },
+      { id:8, nom:'M. et Mme Garcia', prenom:'', type:'particulier', segment:'prospect', couleur:'#F472B6', initiales:'GG',
+        tel:'06 23 45 67 89', email:'', adresse:"22 rue des Vignes, Saint-Denis-de-l'Hôtel",
+        ville:"Saint-Denis-de-l'Hôtel", cp:'45550', rge:false, pipe:'negociation',
+        chantiers:[], devis:['DEV-2026-008'], factures:[],
+        caTotal:38000, caEncaisse:0, notes:'Extension bois 35m² — PC en cours instruction (2 mois). Très motivés. Gros potentiel.',
+        tags:['extension','bois'],
+        contacts:[{d:'08 Avr 2026',type:'devis',txt:'PC déposé 02/04 — accord devis sous réserve'}],
+        origine:'Recommandation', dateCreation:'2026-03-20' },
+      { id:9, nom:'Mme Sophie Laurent', prenom:'Sophie', type:'particulier', segment:'actif', couleur:'#C8A84B', initiales:'SL',
+        tel:'07 89 01 23 45', email:'', adresse:'9 rue des Acacias, 45800 Combleux',
+        ville:'Combleux', cp:'45800', rge:false, pipe:'gagne',
+        chantiers:['VDS-2026-009'], devis:['DEV-2026-001'], factures:['FAC-2026-001'],
+        caTotal:6400, caEncaisse:6400, notes:'Chantier terminé payé. Cliente très satisfaite. Avis Google demandé. Potentiel : terrasse à créer.',
+        tags:['dalle','termine','fidele'],
+        contacts:[{d:'05 Fév 2026',type:'contact',txt:'Réception OK — avis Google demandé'},{d:'10 Fév 2026',type:'facture',txt:'Paiement reçu — virement'}],
+        origine:'Internet', dateCreation:'2026-01-10' },
+      { id:10, nom:'M. Roger Blanchard', prenom:'Roger', type:'particulier', segment:'actif', couleur:'#4A7BA8', initiales:'RB',
+        tel:'06 34 56 78 90', email:'', adresse:'18 route de Sully, 45150 Jargeau',
+        ville:'Jargeau', cp:'45150', rge:true, pipe:'gagne',
+        chantiers:['VDS-2026-010'], devis:['DEV-2026-002'], factures:['FAC-2026-002'],
+        caTotal:3800, caEncaisse:3800, notes:'Terminé payé. Attestation RGE remise. Voisins potentiels à contacter (rue de Sully).',
+        tags:['rge','combles','termine'],
+        contacts:[{d:'28 Jan 2026',type:'facture',txt:'Paiement chèque encaissé'}],
+        origine:'Internet', dateCreation:'2026-01-05' },
+    ];
+
+    /* ════════════════════════════════════════════════════════════════
+       STATE
+    ════════════════════════════════════════════════════════════════ */
+    let clients  = DEFAULT_CLIENTS.map(c => ({...c, chantiers:[...c.chantiers], devis:[...c.devis], factures:[...c.factures], contacts:[...c.contacts], tags:[...c.tags]}));
+    let nextId   = 100;
+    let curFilter = 'tous';
+
+    /* ════════════════════════════════════════════════════════════════
+       PERSISTANCE
+    ════════════════════════════════════════════════════════════════ */
+    const CRM = {
+      getData() { return { clients, nextId }; },
+      applyData(s) {
+        if (s.clients) clients = s.clients;
+        if (s.nextId)  nextId  = s.nextId;
+      },
+      getSnapshot() {
+        return {
+          nbClients:    clients.length,
+          caTotal:      clients.reduce((s,c) => s + c.caTotal, 0),
+          nbVip:        clients.filter(c => c.segment === 'vip').length,
+          nbProspects:  clients.filter(c => c.segment === 'prospect').length,
+        };
+      },
+      validateImport: d => d && Array.isArray(d.clients),
+
+      /* ── Helpers ── */
+      _avatar(c, size='40px') {
+        return `<div style="width:${size};height:${size};border-radius:50%;background:${c.couleur}22;border:2px solid ${c.couleur};display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:${parseInt(size)>44?'18px':'13px'};font-weight:800;color:${c.couleur};flex-shrink:0;">${c.initiales}</div>`;
+      },
+      _segBadge(c) {
+        const segs = [];
+        if (c.segment === 'vip')     segs.push(`<span class="sbadge ${SEG_CSS.vip}">${SEG_LBL.vip}</span>`);
+        if (c.rge)                   segs.push(`<span class="sbadge ${SEG_CSS.rge}">🏆 RGE</span>`);
+        if (c.segment !== 'vip' && c.segment !== 'rge') segs.push(`<span class="sbadge ${SEG_CSS[c.segment]||'s-af'}">${SEG_LBL[c.segment]||c.segment}</span>`);
+        return segs.join(' ');
+      },
+      _potScore(c) {
+        // Score potentiel basé sur CA, RGE, tags, activité
+        let score = 0;
+        if (c.caTotal > 30000) score += 40;
+        else if (c.caTotal > 10000) score += 25;
+        else if (c.caTotal > 3000)  score += 10;
+        if (c.rge) score += 20;
+        if (c.caEncaisse === c.caTotal && c.caTotal > 0) score += 15; // bon payeur
+        if (c.tags.includes('fidele')) score += 15;
+        if (c.notes.length > 100)  score += 10;
+        return Math.min(100, score);
+      },
+
+      /* ── DASHBOARD ── */
+      renderDashboard() {
+        const caTotal    = clients.reduce((s,c) => s + c.caTotal, 0);
+        const caEncaisse = clients.reduce((s,c) => s + c.caEncaisse, 0);
+        const vips       = clients.filter(c => c.segment === 'vip');
+        const prospects  = clients.filter(c => c.segment === 'prospect');
+        const rges       = clients.filter(c => c.rge);
+
+        $('dashKpis').innerHTML = [
+          { l:'Clients portefeuille', v:clients.length,    s:'Actifs + prospects',    c:'cb' },
+          { l:'CA total portefeuille',v:fmt(caTotal),      s:'Tous chantiers 2026',   c:'co' },
+          { l:'CA encaissé',          v:fmt(caEncaisse),   s:'Règlements reçus',      c:'cv' },
+          { l:'Clients VIP',          v:vips.length,       s:'CA > 10 000 €',         c:'cj' },
+          { l:'Prospects actifs',     v:prospects.length,  s:'À concrétiser',         c:'col'},
+          { l:'Clients RGE',          v:rges.length,       s:'Éligibles aides état',  c:'cb' },
+        ].map(k => `<div class="kpi ${k.c}"><div class="kl">${k.l}</div><div class="kv">${k.v}</div><div class="ks">${k.s}</div></div>`).join('');
+
+        // Pills
+        const vp=$('pill-vip'),pp=$('pill-prospects'),rp=$('pill-relances');
+        if(vp)vp.textContent=vips.length;
+        if(pp)pp.textContent=prospects.length;
+
+        // VIP
+        $('dashVip').innerHTML = vips.length === 0 ? '<div class="empty">Aucun client VIP.</div>'
+          : vips.map(c => `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd);cursor:pointer;" onclick="CRM.openDetail(${c.id})">
+            ${this._avatar(c)}
+            <div style="flex:1;overflow:hidden;">
+              <div style="font-size:13px;font-weight:600;">${utils.esc(c.nom)}</div>
+              <div style="font-size:10.5px;color:var(--af);">${c.ville} · ${c.chantiers.length} chantier(s)</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--or);">${fmt(c.caTotal)}</div>
+              <div style="font-size:10px;color:var(--af);">CA total</div>
+            </div>
+          </div>`).join('');
+
+        // Relances (devis envoyés sans réponse + factures impayées)
+        const relances = clients.filter(c =>
+          c.devis.length > 0 && c.segment === 'prospect' ||
+          c.factures.length > 0 && c.caEncaisse < c.caTotal
+        ).slice(0, 5);
+        const rEl = $('dashRelances');
+        if(rp)rp.textContent=relances.length;
+        rEl.innerHTML = relances.length === 0
+          ? '<div class="empty empty-ok">✓ Aucune relance en attente</div>'
+          : relances.map(c => {
+            const hasImpaye = c.factures.length > 0 && c.caEncaisse < c.caTotal;
+            const ico = hasImpaye ? '⚠' : '📋';
+            const txt = hasImpaye ? `Impayé ${fmt(c.caTotal - c.caEncaisse)}` : `Devis en attente ${fmt(c.caTotal)}`;
+            return `<div style="display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--bd);cursor:pointer;" onclick="CRM.openDetail(${c.id})">
+              <span style="font-size:16px;">${ico}</span>
+              <div style="flex:1;">
+                <div style="font-size:12.5px;font-weight:600;">${utils.esc(c.nom)}</div>
+                <div style="font-size:10.5px;color:var(--af);">${txt}</div>
+              </div>
+              <button class="bou" style="font-size:10px;padding:3px 9px;" onclick="event.stopPropagation();CRM.openModal('contact',${c.id})">📞</button>
+            </div>`;
+          }).join('');
+
+        // Activité récente
+        const allActs = clients.flatMap(c => c.contacts.map(a => ({ ...a, client:c.nom, clientId:c.id })));
+        allActs.sort((a,b) => b.d.localeCompare(a.d));
+        $('dashActivite').innerHTML = allActs.length === 0
+          ? '<div class="empty">Aucune activité.</div>'
+          : allActs.slice(0, 8).map(a => `<div class="act-item">
+            <div class="act-dot ${a.type}"></div>
+            <div class="act-date">${a.d.split(' ').slice(0,2).join(' ')}</div>
+            <div class="act-txt">${utils.esc(a.txt)}<div class="act-ref">${utils.esc(a.client)}</div></div>
+          </div>`).join('');
+      },
+
+      /* ── LISTE CLIENTS ── */
+      renderClients() {
+        let list = curFilter === 'tous' ? clients
+          : curFilter === 'rge'    ? clients.filter(c => c.rge)
+          : clients.filter(c => c.segment === curFilter);
+        $('clientsGrid').innerHTML = list.length === 0
+          ? '<div class="empty">Aucun client dans ce segment.</div>'
+          : list.map(c => this._card(c)).join('');
+      },
+      filterClients(f, btn) {
+        curFilter = f;
+        utils.qa('.fb').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.renderClients();
+      },
+      _card(c) {
+        const pot = this._potScore(c);
+        const potCls = pot >= 60 ? 'high' : pot >= 30 ? 'mid' : 'low';
+        return `<div class="cl-card" onclick="CRM.openDetail(${c.id})">
+          <div class="cl-bar" style="background:${c.couleur};"></div>
+          <div class="cl-body">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                ${this._avatar(c,'44px')}
+                <div>
+                  <div class="cl-name">${utils.esc(c.nom)}</div>
+                  <div class="cl-type">${TYPE_LBL[c.type]||c.type} · ${c.ville}</div>
+                </div>
+              </div>
+              ${this._segBadge(c)}
+            </div>
+            <div class="cl-meta">
+              <div class="cl-m">📞 ${c.tel||'—'}</div>
+              <div class="cl-m">🏗 ${c.chantiers.length} chantier(s)</div>
+              <div class="cl-m">📋 ${c.devis.length} devis</div>
+              <div class="cl-m">🧾 ${c.factures.length} facture(s)</div>
+            </div>
+            <div style="margin-top:10px;">
+              <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--af);margin-bottom:3px;">
+                <span>Potentiel client</span><span style="color:var(--or);font-weight:600;">${pot}%</span>
+              </div>
+              <div class="pot-bar"><div class="pot-fill ${potCls}" style="width:${pot}%;"></div></div>
+            </div>
+          </div>
+          <div class="cl-foot">
+            <div>
+              <div class="cl-cal">CA total</div>
+              <div class="cl-ca">${fmt(c.caTotal)}</div>
+            </div>
+            <div style="display:flex;gap:5px;" onclick="event.stopPropagation()">
+              <button class="bg2" onclick="CRM.openModal('edit',${c.id})">✎</button>
+              <button class="bou" onclick="CRM.openModal('contact',${c.id})" title="Ajouter contact">📞</button>
+              <button class="bd2" onclick="CRM.deleteClient(${c.id})">🗑</button>
+            </div>
+          </div>
+        </div>`;
+      },
+
+      /* ── PIPELINE ── */
+      renderPipeline() {
+        const wrap = $('pipelineWrap'); if (!wrap) return;
+        const cols = {};
+        PIPE_ETAPES.forEach(e => cols[e] = clients.filter(c => c.pipe === e));
+
+        let html = '<div class="pipeline">';
+        PIPE_ETAPES.forEach(etape => {
+          const list = cols[etape] || [];
+          const total = list.reduce((s,c) => s + c.caTotal, 0);
+          html += `<div class="pipe-col">
+            <div class="pipe-hdr" style="color:${PIPE_COLORS[etape]};">${PIPE_LBL[etape]} <span style="font-family:'Syne',sans-serif;color:${PIPE_COLORS[etape]};margin-left:4px;">${list.length}</span></div>
+            <div style="font-size:10px;color:var(--af);padding:4px 12px 7px;border-bottom:1px solid var(--bd);">${fmt(total)}</div>
+            <div class="pipe-body">
+              ${list.length === 0 ? '<div style="font-size:11px;color:var(--af);padding:8px 0;text-align:center;">Vide</div>'
+                : list.map(c => `<div class="pipe-card" onclick="CRM.openDetail(${c.id})">
+                  <div class="pipe-card-ref">${c.chantiers[0]||c.devis[0]||'—'}</div>
+                  <div class="pipe-card-client">${utils.esc(c.nom)}</div>
+                  <div class="pipe-card-val">${fmt(c.caTotal)}</div>
+                  ${c.rge ? '<span class="sbadge seg-rge" style="font-size:9px;margin-top:4px;">RGE</span>' : ''}
+                </div>`).join('')}
+            </div>
+          </div>`;
+        });
+        html += '</div>';
+        wrap.innerHTML = html;
+      },
+
+      /* ── RELANCES ── */
+      renderRelances() {
+        const el = $('relancesContent'); if (!el) return;
+        const devisAtt = clients.filter(c => c.pipe === 'devis' || c.pipe === 'negociation');
+        const impayés  = clients.filter(c => c.caEncaisse < c.caTotal && c.caTotal > 0 && c.factures.length > 0);
+
+        let html = '';
+        if (devisAtt.length > 0) {
+          html += `<div class="sec"><h3>📋 Devis en attente de réponse (${devisAtt.length})</h3>`;
+          html += devisAtt.map(c => `<div class="relance-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+              <div><div style="font-weight:700;font-size:13.5px;">${utils.esc(c.nom)}</div>
+              <div style="font-size:11px;color:var(--af);">${c.ville} · ${c.tel}</div>
+              <div style="font-size:11px;margin-top:3px;color:var(--am);">${utils.esc(c.notes?.slice(0,100)||'—')}</div></div>
+              <div style="text-align:right;flex-shrink:0;">
+                <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--or);">${fmt(c.caTotal)}</div>
+                ${this._segBadge(c)}
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+              <button class="bo" onclick="CRM.openModal('contact',${c.id})">📞 Log contact</button>
+              <button class="bou" onclick="CRM.openDetail(${c.id})">👁 Fiche client</button>
+              ${c.tel?`<a href="tel:${c.tel}" class="bg2" style="padding:7px 13px;border-radius:var(--radius-sm);font-size:12px;color:var(--ac);text-decoration:none;">📱 Appeler</a>`:''}
+            </div>
+          </div>`).join('');
+          html += '</div>';
+        }
+
+        if (impayés.length > 0) {
+          html += `<div class="sec"><h3>⚠ Factures impayées (${impayés.length})</h3>`;
+          html += impayés.map(c => `<div class="relance-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+              <div><div style="font-weight:700;font-size:13.5px;">${utils.esc(c.nom)}</div>
+              <div style="font-size:11px;color:var(--af);">${c.ville} · ${c.tel}</div></div>
+              <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--rll);">${fmt(c.caTotal - c.caEncaisse)}</div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+              <button class="bo" onclick="CRM.openModal('contact',${c.id})">📞 Log contact</button>
+              ${c.email?`<a href="mailto:${c.email}?subject=Relance%20facture&body=Bonjour%2C%0A%0ANous%20n'avons%20pas%20encore%20r%C3%A9ceptionn%C3%A9%20votre%20r%C3%A8glement...%0A%0ACordialement%2C%0AVilar%20DS" class="bou" style="padding:7px 13px;border-radius:var(--radius-sm);font-size:12px;color:var(--bc);text-decoration:none;">✉ Email</a>`:''}
+            </div>
+          </div>`).join('');
+          html += '</div>';
+        }
+
+        if (!html) el.innerHTML = '<div class="empty empty-ok" style="font-size:14px;padding:40px 0;">✓ Aucune relance en attente — tout est à jour.</div>';
+        else el.innerHTML = html;
+      },
+
+      /* ── STATS ── */
+      renderStats() {
+        const el = $('statsContent'); if (!el) return;
+        const byVille = {};
+        clients.forEach(c => { byVille[c.ville] = (byVille[c.ville]||0) + 1; });
+        const byOrigine = {};
+        clients.forEach(c => { byOrigine[c.origine||'Inconnu'] = (byOrigine[c.origine||'Inconnu']||0) + 1; });
+        const bySegment = { vip:0, actif:0, prospect:0, inactif:0 };
+        clients.forEach(c => { bySegment[c.segment]++; });
+        const totalCA = clients.reduce((s,c) => s + c.caTotal, 0);
+        const topCA = [...clients].sort((a,b) => b.caTotal - a.caTotal);
+
+        el.innerHTML = `
+          <div class="dual">
+            <div class="sec" style="margin-bottom:0;"><h3>🗺 Répartition géographique</h3>
+              ${Object.entries(byVille).sort((a,b)=>b[1]-a[1]).map(([ville,n]) =>
+                `<div class="cl-stat-row"><span class="cl-stat-label">${ville}</span>
+                 <span class="cl-stat-val">${n} client${n>1?'s':''}</span></div>`
+              ).join('')}
+            </div>
+            <div class="sec" style="margin-bottom:0;"><h3>📣 Source d'acquisition</h3>
+              ${Object.entries(byOrigine).sort((a,b)=>b[1]-a[1]).map(([orig,n]) =>
+                `<div class="cl-stat-row"><span class="cl-stat-label">${orig}</span>
+                 <span class="cl-stat-val">${n}</span></div>`
+              ).join('')}
+            </div>
+          </div>
+          <div class="sec"><h3>🏆 Top clients par CA</h3>
+            ${topCA.map((c,i) => {
+              const pct = totalCA > 0 ? Math.round(c.caTotal/totalCA*100) : 0;
+              return `<div style="margin-bottom:10px;">
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+                  <span>${i+1}. ${utils.esc(c.nom)} <span style="color:var(--af);">— ${c.ville}</span></span>
+                  <span style="font-weight:700;color:var(--or);">${fmt(c.caTotal)}</span>
+                </div>
+                <div class="pot-bar"><div class="pot-fill high" style="width:${pct}%;"></div></div>
+              </div>`;
+            }).join('')}
+          </div>
+          <div class="dual">
+            <div class="sec" style="margin-bottom:0;"><h3>📊 Segments</h3>
+              ${Object.entries(bySegment).map(([seg,n]) =>
+                `<div class="cl-stat-row">
+                  <span class="cl-stat-label"><span class="sbadge ${SEG_CSS[seg]||''}" style="font-size:9px;">${SEG_LBL[seg]||seg}</span></span>
+                  <span class="cl-stat-val">${n}</span>
+                </div>`
+              ).join('')}
+            </div>
+            <div class="sec" style="margin-bottom:0;"><h3>💰 Taux encaissement</h3>
+              ${clients.filter(c=>c.caTotal>0).map(c=>{
+                const pct=c.caTotal>0?Math.round(c.caEncaisse/c.caTotal*100):0;
+                return `<div style="margin-bottom:8px;">
+                  <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">
+                    <span>${utils.esc(c.nom)}</span><span style="font-weight:600;color:var(--or);">${pct}%</span>
+                  </div>
+                  <div class="pot-bar"><div class="pot-fill ${pct===100?'high':pct>0?'mid':'low'}" style="width:${pct}%;"></div></div>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>`;
+      },
+
+      /* ── DÉTAIL CLIENT ── */
+      openDetail(id) {
+        const c = clients.find(x => x.id === id); if (!c) return;
+        const pot = this._potScore(c);
+        const potCls = pot >= 60 ? 'high' : pot >= 30 ? 'mid' : 'low';
+
+        $('detailContent').innerHTML = `
+          <div class="cl-detail-grid">
+            <!-- Colonne gauche : fiche identité -->
+            <div>
+              <div class="cl-sidebar-card" style="text-align:center;border-top:3px solid ${c.couleur};margin-bottom:13px;">
+                <div style="margin:16px auto 10px;">${this._avatar(c,'64px')}</div>
+                <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;">${utils.esc(c.nom)}</div>
+                <div style="font-size:11.5px;color:var(--bc);margin-top:2px;">${TYPE_LBL[c.type]||c.type} · ${c.ville}</div>
+                <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:8px;">${this._segBadge(c)}</div>
+                <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);">
+                  ${c.tel?`<a href="tel:${c.tel}" style="display:block;color:var(--bc);font-size:13px;font-weight:600;text-decoration:none;margin-bottom:5px;">📞 ${c.tel}</a>`:''}
+                  ${c.email?`<a href="mailto:${c.email}" style="display:block;color:var(--bc);font-size:12px;text-decoration:none;">✉ ${c.email}</a>`:''}
+                  ${c.adresse?`<div style="font-size:11px;color:var(--af);margin-top:5px;">📍 ${utils.esc(c.adresse)}</div>`:''}
+                </div>
+                <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);">
+                  <div style="font-size:10px;color:var(--af);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Potentiel client</div>
+                  <div style="font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--or);">${pot}%</div>
+                  <div class="pot-bar" style="height:10px;margin:6px 8px;"><div class="pot-fill ${potCls}" style="width:${pot}%;"></div></div>
+                </div>
+              </div>
+              <div class="cl-sidebar-card" style="margin-bottom:13px;">
+                <div style="font-size:10px;color:var(--or);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Indicateurs financiers</div>
+                <div class="cl-stat-row"><span class="cl-stat-label">CA total</span><span class="cl-stat-val">${fmt(c.caTotal)}</span></div>
+                <div class="cl-stat-row"><span class="cl-stat-label">Encaissé</span><span class="cl-stat-val" style="${c.caEncaisse===c.caTotal&&c.caTotal>0?'color:var(--vll);':''}">${fmt(c.caEncaisse)}</span></div>
+                <div class="cl-stat-row"><span class="cl-stat-label">Reste à encaisser</span><span class="cl-stat-val" style="${c.caTotal-c.caEncaisse>0?'color:var(--rll);':''}">${fmt(c.caTotal-c.caEncaisse)}</span></div>
+                <div class="cl-stat-row"><span class="cl-stat-label">Chantiers</span><span class="cl-stat-val" style="color:var(--bc);">${c.chantiers.length}</span></div>
+                <div class="cl-stat-row"><span class="cl-stat-label">Pipeline</span><span class="cl-stat-val">${PIPE_LBL[c.pipe]||c.pipe}</span></div>
+                <div class="cl-stat-row"><span class="cl-stat-label">RGE</span><span class="cl-stat-val">${c.rge?'<span style="color:var(--vll);">✓ Oui</span>':'Non'}</span></div>
+                <div class="cl-stat-row"><span class="cl-stat-label">Origine</span><span class="cl-stat-val">${c.origine||'—'}</span></div>
+              </div>
+              ${c.tags.length?`<div class="cl-sidebar-card">
+                <div style="font-size:10px;color:var(--or);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Tags</div>
+                <div style="display:flex;flex-wrap:wrap;gap:5px;">${c.tags.map(t=>`<span class="sbadge s-af" style="font-size:10px;">#${t}</span>`).join('')}</div>
+              </div>`:''}
+            </div>
+
+            <!-- Colonne droite : activité -->
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+                <div>
+                  <h1 style="font-family:'Syne',sans-serif;font-size:21px;font-weight:800;">${utils.esc(c.nom)}</h1>
+                  <p style="color:var(--af);font-size:12px;">${c.adresse||c.ville}</p>
+                </div>
+                <div style="display:flex;gap:7px;flex-wrap:wrap;">
+                  <button class="bo" onclick="CRM.openModal('contact',${c.id})">+ Log contact</button>
+                  <button class="bou" onclick="CRM.openModal('edit',${c.id})">✎ Modifier</button>
+                </div>
+              </div>
+
+              ${c.notes?`<div class="sec"><h3>📝 Notes</h3><p style="font-size:13px;color:var(--am);line-height:1.7;">${utils.esc(c.notes)}</p></div>`:''}
+
+              <div class="sec"><h3>📅 Historique & Contacts (${c.contacts.length})</h3>
+                ${c.contacts.length===0?'<div class="empty">Aucun contact enregistré.</div>'
+                  : `<div>${c.contacts.slice().reverse().map(a=>`<div class="act-item">
+                      <div class="act-dot ${a.type}"></div>
+                      <div class="act-date">${a.d}</div>
+                      <div class="act-txt">${utils.esc(a.txt)}</div>
+                    </div>`).join('')}</div>`}
+                <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+                  <button class="bo" onclick="CRM.openModal('contact',${c.id})">+ Ajouter une note</button>
+                  ${c.tel?`<a href="tel:${c.tel}" class="bou" style="padding:7px 13px;border-radius:var(--radius-sm);font-size:12px;text-decoration:none;color:var(--bc);">📱 Appeler</a>`:''}
+                  ${c.email?`<a href="mailto:${c.email}" class="bou" style="padding:7px 13px;border-radius:var(--radius-sm);font-size:12px;text-decoration:none;color:var(--bc);">✉ Email</a>`:''}
+                </div>
+              </div>
+
+              <div class="dual">
+                ${c.chantiers.length?`<div class="sec" style="margin-bottom:0;"><h3>🏗 Chantiers (${c.chantiers.length})</h3>
+                  ${c.chantiers.map(ref=>`<div style="padding:8px 0;border-bottom:1px solid var(--bd);font-size:12px;font-weight:600;">${ref}</div>`).join('')}
+                </div>`:''}
+                ${c.devis.length||c.factures.length?`<div class="sec" style="margin-bottom:0;"><h3>📄 Documents</h3>
+                  ${c.devis.map(r=>`<div style="padding:6px 0;border-bottom:1px solid var(--bd);font-size:12px;"><span class="sbadge s-br" style="font-size:9px;">DEV</span> ${r}</div>`).join('')}
+                  ${c.factures.map(r=>`<div style="padding:6px 0;border-bottom:1px solid var(--bd);font-size:12px;"><span class="sbadge s-pa" style="font-size:9px;">FAC</span> ${r}</div>`).join('')}
+                </div>`:''}
+              </div>
+            </div>
+          </div>`;
+        nav.go('detail');
+      },
+
+      /* ── MODAL ── */
+      openModal(type='new', clientId=null) {
+        const c = clientId ? clients.find(x => x.id === clientId) : null;
+        this._modalType = type;
+        this._modalClientId = clientId;
+
+        if (type === 'contact') {
+          modal.open({
+            title: c ? '📞 Log contact — '+c.nom : '📞 Nouveau contact',
+            body: `<div class="fg">
+              <div class="f1 full"><label class="fl">Type d'activité</label>
+                <select class="fi" id="ct-type">
+                  <option value="contact">Appel / Visite</option>
+                  <option value="devis">Devis</option>
+                  <option value="facture">Facture</option>
+                  <option value="chantier">Chantier</option>
+                  <option value="note">Note interne</option>
+                </select>
+              </div>
+              <div class="f1 full"><label class="fl">Compte-rendu *</label>
+                <textarea class="fi fi-area" id="ct-txt" placeholder="Ex: Appel téléphonique — client confirme démarrage 15 mai..." style="min-height:80px;"></textarea>
+              </div>
+            </div>`,
+            saveLabel: '💾 Enregistrer',
+            onSave: () => this._saveContact(),
+          });
+        } else if (type === 'edit' && c) {
+          modal.open({
+            title: '✎ Modifier — '+c.nom,
+            body: this._clientForm(c),
+            saveLabel: '💾 Enregistrer',
+            onSave: () => this._saveClient(),
+          });
+        } else {
+          // Nouveau client
+          modal.open({
+            title: '+ Nouveau client',
+            body: this._clientForm(null),
+            saveLabel: '💾 Créer client',
+            onSave: () => this._saveClient(),
+          });
+        }
+      },
+
+      _clientForm(c) {
+        const v = k => c ? (c[k]??'') : '';
+        return `<div class="fg">
+          <div class="f1 full"><label class="fl">Nom complet *</label><input class="fi" id="cl-nom" type="text" value="${utils.esc(v('nom'))}" placeholder="Ex: M. et Mme Fontaine"></div>
+          <div class="f1"><label class="fl">Type</label>
+            <select class="fi" id="cl-type">
+              ${['particulier','professionnel','collectivite','promoteur'].map(t=>`<option value="${t}" ${v('type')===t?'selected':''}>${TYPE_LBL[t]}</option>`).join('')}
+            </select>
+          </div>
+          <div class="f1"><label class="fl">Segment</label>
+            <select class="fi" id="cl-segment">
+              ${['actif','vip','prospect','inactif'].map(s=>`<option value="${s}" ${v('segment')===s?'selected':''}>${SEG_LBL[s]}</option>`).join('')}
+            </select>
+          </div>
+          <div class="f1"><label class="fl">Téléphone</label><input class="fi" id="cl-tel" type="tel" value="${utils.esc(v('tel'))}" placeholder="06 XX XX XX XX"></div>
+          <div class="f1"><label class="fl">Email</label><input class="fi" id="cl-email" type="email" value="${utils.esc(v('email'))}"></div>
+          <div class="f1 full"><label class="fl">Adresse</label><input class="fi" id="cl-adresse" type="text" value="${utils.esc(v('adresse'))}"></div>
+          <div class="f1"><label class="fl">Ville</label><input class="fi" id="cl-ville" type="text" value="${utils.esc(v('ville'))}"></div>
+          <div class="f1"><label class="fl">Code postal</label><input class="fi" id="cl-cp" type="text" value="${utils.esc(v('cp'))}"></div>
+          <div class="f1"><label class="fl">CA total (€)</label><input class="fi" id="cl-ca" type="number" min="0" value="${v('caTotal')||0}"></div>
+          <div class="f1"><label class="fl">CA encaissé (€)</label><input class="fi" id="cl-caenc" type="number" min="0" value="${v('caEncaisse')||0}"></div>
+          <div class="f1"><label class="fl">Pipeline</label>
+            <select class="fi" id="cl-pipe">
+              ${PIPE_ETAPES.map(e=>`<option value="${e}" ${v('pipe')===e?'selected':''}>${PIPE_LBL[e]}</option>`).join('')}
+            </select>
+          </div>
+          <div class="f1"><label class="fl">Origine</label>
+            <select class="fi" id="cl-origine">
+              ${['Bouche à oreille','Google','Recommandation','Internet','Proximité','Annuaire','Autre'].map(o=>`<option ${v('origine')===o?'selected':''}>${o}</option>`).join('')}
+            </select>
+          </div>
+          <div class="f1" style="display:flex;align-items:center;gap:10px;padding-top:8px;">
+            <input type="checkbox" id="cl-rge" style="width:16px;height:16px;" ${v('rge')?'checked':''}><label for="cl-rge" class="fl" style="margin:0;">Éligible RGE</label>
+          </div>
+          <div class="f1 full"><label class="fl">Tags (virgule-séparés)</label><input class="fi" id="cl-tags" type="text" value="${utils.esc((v('tags')||[]).join(','))}" placeholder="renovation, rge, fidele"></div>
+          <div class="f1 full"><label class="fl">Notes</label><textarea class="fi fi-area" id="cl-notes" style="min-height:70px;">${utils.esc(v('notes'))}</textarea></div>
+        </div>`;
+      },
+
+      _saveContact() {
+        const txt  = ($('ct-txt')?.value||'').trim();
+        const type = $('ct-type')?.value || 'contact';
+        if (!txt) { toast.show('Entrez un compte-rendu','err'); return; }
+        const c = clients.find(x => x.id === this._modalClientId);
+        if (!c) return;
+        const d = new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'});
+        c.contacts.push({d, type, txt});
+        modal.close(); persistence.mark();
+        this.refreshAll();
+        if (nav.current === 'detail') this.openDetail(c.id);
+        toast.show('Contact enregistré ✓','ok');
+      },
+
+      _saveClient() {
+        const nom = ($('cl-nom')?.value||'').trim();
+        if (!nom) { toast.show('Nom obligatoire','err'); return; }
+        const g = id => $(id)?.value?.trim() || '';
+        const data = {
+          nom, type:g('cl-type'), segment:g('cl-segment'),
+          tel:g('cl-tel'), email:g('cl-email'),
+          adresse:g('cl-adresse'), ville:g('cl-ville'), cp:g('cl-cp'),
+          caTotal:parseInt($('cl-ca')?.value)||0,
+          caEncaisse:parseInt($('cl-caenc')?.value)||0,
+          pipe:g('cl-pipe'), origine:g('cl-origine'),
+          rge:$('cl-rge')?.checked||false,
+          tags:g('cl-tags').split(',').map(t=>t.trim()).filter(Boolean),
+          notes:g('cl-notes'),
+        };
+
+        if (this._modalType === 'edit' && this._modalClientId) {
+          const c = clients.find(x => x.id === this._modalClientId);
+          if (c) { data.initiales=(nom.split(' ').filter(w=>w&&!/^(M\.|Mme|M|et)$/i.test(w)).map(w=>w[0]).join('').slice(0,2).toUpperCase()||nom.slice(0,2).toUpperCase()); Object.assign(c, data); }
+          toast.show('Client mis à jour ✓','ok');
+        } else {
+          const initiales=(nom.split(' ').filter(w=>w&&!/^(M\.|Mme|M|et)$/i.test(w)).map(w=>w[0]).join('').slice(0,2).toUpperCase()||nom.slice(0,2).toUpperCase());
+          clients.push({ id:++nextId, ...data, initiales, couleur:COLORS[clients.length%COLORS.length],
+            chantiers:[], devis:[], factures:[], contacts:[], dateCreation:new Date().toISOString().slice(0,10) });
+          toast.show('Client créé ✓','ok');
+        }
+        modal.close(); persistence.mark(); this.refreshAll();
+      },
+
+      deleteClient(id) {
+        const c = clients.find(x => x.id === id);
+        if (!confirm(`Supprimer "${c?.nom}" ?`)) return;
+        clients = clients.filter(x => x.id !== id);
+        persistence.mark(); this.refreshAll(); toast.show('Client supprimé','sv');
+        if (nav.current === 'detail') nav.back();
+      },
+
+      /* ── Export/Import ── */
+      exportCSV() {
+        let csv = '\uFEFF';
+        csv += 'Nom,Type,Segment,Ville,Téléphone,Email,CA Total,CA Encaissé,Pipeline,RGE,Chantiers,Origine\n';
+        clients.forEach(c => {
+          csv += `"${c.nom}","${c.type}","${c.segment}","${c.ville}","${c.tel}","${c.email}",${c.caTotal},${c.caEncaisse},"${c.pipe}","${c.rge?'Oui':'Non'}","${c.chantiers.join(';')}","${c.origine||''}"\n`;
+        });
+        const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+        const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+        a.download='VilarDS_CRM_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+        toast.show('CSV exporté ✓','ok');
+      },
+      handleImport(input) {
+        const file=input.files[0];if(!file)return;
+        if(!confirm('Importer "'+file.name+'" ? Données actuelles remplacées.')){input.value='';return;}
+        const reader=new FileReader();
+        reader.onload=e=>{try{const d=JSON.parse(e.target.result);this.applyData(d);persistence.save(false);this.refreshAll();toast.show('Import réussi ✓','ok');}catch{toast.show('Fichier invalide','err');}input.value='';};
+        reader.readAsText(file);
+      },
+
+      refreshAll() {
+        this.renderDashboard();
+        const av = nav.current;
+        if (av==='clients')   this.renderClients();
+        if (av==='pipeline')  this.renderPipeline();
+        if (av==='relances')  this.renderRelances();
+        if (av==='stats')     this.renderStats();
+      },
+
+      _modalType: 'new',
+      _modalClientId: null,
+    };
+
+    /* ════════════════════════════════════════════════════════════════
+       NAVIGATION
+    ════════════════════════════════════════════════════════════════ */
+    nav.register('dashboard', () => CRM.renderDashboard());
+    nav.register('clients',   () => CRM.renderClients());
+    nav.register('pipeline',  () => CRM.renderPipeline());
+    nav.register('relances',  () => CRM.renderRelances());
+    nav.register('stats',     () => CRM.renderStats());
+    nav.register('detail',    () => {});
+
+    /* ════════════════════════════════════════════════════════════════
+       MONTAGE UI
+    ════════════════════════════════════════════════════════════════ */
+    VilarUI.mountModule({
+      sidebar: {
+        moduleName:    'CRM Clients 2026',
+        moduleVersion: 'v1.0 — IndexedDB + AppBus',
+        navItems: [
+          { type:'section', label:'Vue d\'ensemble' },
+          { id:'dashboard', icon:'⊞', label:'Dashboard clients' },
+          { type:'section', label:'Gestion' },
+          { id:'clients',   icon:'👤', label:'Portefeuille' },
+          { id:'pipeline',  icon:'📊', label:'Pipeline commercial' },
+          { id:'relances',  icon:'📞', label:'Relances & Suivis', pill:0, pillId:'pill-relances', pillClass:'pr' },
+          { type:'section', label:'Analyse' },
+          { id:'stats',     icon:'📈', label:'Statistiques' },
+        ],
+        dataActions: [
+          { label:'↓ JSON',     onClick:"VilarCore.io.exportJSON(CRM.getData(),'CRM')" },
+          { label:'↓ CSV',      onClick:"CRM.exportCSV()" },
+          { label:'↑ Importer', onClick:"document.getElementById('importFile').click()" },
+          { label:'🖨 Imprimer', onClick:'window.print()' },
+        ],
+      },
+      header: {
+        title: 'CRM Clients',
+        year:  '2026',
+        actions: [
+          { label:'💾',        class:'sec', onClick:"VilarCore.persistence.save(false)" },
+          { label:'+ Client',              onClick:"CRM.openModal()" },
+          { label:'📞 Contact', class:'bou', onClick:"CRM.openModal('contact')" },
+        ],
+        avatar: 'JV',
+      },
+      bannerModuleName: 'CRM',
+    });
+
+    window.CRM = CRM;
+
+    /* ════════════════════════════════════════════════════════════════
+       INIT
+    ════════════════════════════════════════════════════════════════ */
+    async function initApp() {
+      try {
+        let saved = await db.getModule(MODULE_KEY);
+        if (!saved) saved = await db.getExternal(LEGACY_DB, 'crmdata', 'crm');
+        if (saved) { CRM.applyData(saved); VilarCore.saveIndicator.update(false, saved.savedAt??null); toast.show('CRM restauré ✓','ok',2000); }
+
+        // Sync AppBus — enrichir les clients depuis les autres modules
+        const chSnap  = await bus.read('chantiers');
+        const factSnap = await bus.read('facturation');
+        if (chSnap?.chantiers) {
+          chSnap.chantiers.forEach(ch => {
+            const c = clients.find(x => x.chantiers.includes(ch.ref));
+            if (c) { c.caTotal = Math.max(c.caTotal, ch.budget||0); }
+          });
+        }
+      } catch(e) { console.error('[CRM] Init:', e); }
+
+      persistence.init(
+        async () => {
+          const p = {...CRM.getData(), savedAt:new Date().toISOString(), _version:'1.0'};
+          await db.setModule(MODULE_KEY, p);
+          await bus.publish(MODULE_KEY, CRM.getSnapshot());
+        },
+        (isDirty, ls) => VilarCore.saveIndicator.update(isDirty, ls),
+      );
+
+      CRM.renderDashboard();
+      const nd = utils.$('nav-dashboard');
+      if (nd) nd.classList.add('active');
+
+      pwa.register(); safeIcons();
+
+      setTimeout(() => {
+        utils.qa('.kpi').forEach((el,i) => {
+          el.style.opacity='0'; el.style.transform='translateY(9px)';
+          setTimeout(()=>{ el.style.transition='all .28s ease'; el.style.opacity='1'; el.style.transform='translateY(0)'; }, i*42+60);
+        });
+      }, 80);
+
+      console.log('%c👤 VilarDS CRM v1.0 — Ready','color:#C8A84B;font-size:12px;font-weight:bold;');
+    }
+
+    if (document.readyState==='loading') { document.addEventListener('DOMContentLoaded', initApp); }
+    else { initApp(); }
+
+  })();
+  </script>
+</body>
+</html>

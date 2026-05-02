@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1C2B3A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Vilar DS Analytics">
+  <title>Vilar DS — Analytics & Rapports 2026</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <!-- Core Vilar DS v2.0 -->
+  <script src="vilar-core.js"></script>
+  <script src="ui-components.js"></script>
+
+  <!-- CSS spécifique Analytics -->
+  <style>
+    /* ── Grille chart (2 colonnes) ── */
+    .cg {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 13px; margin-bottom: 13px;
+    }
+
+    /* ── Chart cards ── */
+    .chart-card {
+      background: var(--bg); border: 1px solid var(--bd);
+      border-radius: var(--radius); padding: 15px;
+    }
+    .chart-card h4 {
+      font-size: 10px; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--af);
+      font-weight: 600; margin-bottom: 12px;
+    }
+
+    /* ── Period bar ── */
+    .period-bar {
+      display: flex; gap: 4px;
+      background: rgba(0,0,0,.2); padding: 3px;
+      border-radius: 8px;
+    }
+    .pb {
+      padding: 5px 12px; border-radius: 6px;
+      font-size: 11.5px; font-weight: 600;
+      cursor: pointer; border: none;
+      background: transparent; color: var(--af);
+      transition: var(--trans);
+      font-family: 'DM Sans', sans-serif;
+    }
+    .pb.active { background: var(--ba); color: white; }
+    .pb:hover:not(.active) { color: var(--ac); }
+
+    /* ── Score ring ── */
+    .score-ring {
+      width: 52px; height: 52px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif; font-size: 16px;
+      font-weight: 800; flex-shrink: 0;
+    }
+
+    /* ── Valeurs colorées ── */
+    .pos { color: var(--vll); }
+    .neg { color: var(--rll); }
+    .or  { color: var(--or);  }
+    .montant { font-weight: 600; font-family: 'Syne', sans-serif; color: var(--or); }
+
+    /* ── Rapport ── */
+    .rapport-card {
+      background: var(--bn); border-radius: var(--radius);
+      padding: 22px; margin-bottom: 16px;
+    }
+    .rapport-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 22px; font-weight: 800;
+    }
+    .rapport-desc { font-size: 12px; color: var(--af); margin-top: 3px; }
+
+    /* ── KD (KPI inline dashboard) ── */
+    .kd {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--af);
+    }
+    .kd strong { color: var(--or); font-family: 'Syne', sans-serif; }
+
+    @media (max-width: 900px) {
+      .cg { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 768px) {
+      .tri { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Mount points UI -->
+  <div id="sb-mount"></div>
+  <div id="hdr-mount"></div>
+  <div id="banner-mount"></div>
+  <div id="modal-mount"></div>
+
+  <main id="main">
+
+    <!-- VUE : OVERVIEW -->
+    <div class="view active" id="view-overview">
+      <div style="margin-bottom:16px;">
+        <h1 style="font-family:'Syne',sans-serif;font-size:21px;font-weight:800;">
+          Analytics <span style="color:var(--or);">2026</span>
+        </h1>
+        <p style="color:var(--af);font-size:12px;margin-top:2px;">
+          Vue consolidée multi-modules — SARL Vilar DS ·
+          <span id="lastSync" style="color:var(--bc);">Non synchronisé</span>
+        </p>
+      </div>
+      <div class="kg" id="overviewKpis"></div>
+      <div class="cg">
+        <div class="chart-card">
+          <h4>📈 CA mensuel HT vs Résultat</h4>
+          <canvas id="chartCA" height="220"></canvas>
+        </div>
+        <div class="chart-card">
+          <h4>🏗 Répartition budget chantiers</h4>
+          <canvas id="chartActivite" height="220"></canvas>
+        </div>
+        <div class="chart-card">
+          <h4>📊 Statuts chantiers</h4>
+          <canvas id="chartChantiers" height="220"></canvas>
+        </div>
+        <div class="chart-card">
+          <h4>🎯 Indicateurs de performance</h4>
+          <canvas id="chartPerf" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- VUE : FINANCIER -->
+    <div class="view" id="view-financier">
+      <div class="sh">
+        <div class="st">💰 Analyse Financière</div>
+        <div class="period-bar">
+          <button class="pb active" onclick="Analytics.setPeriod('T1',this)">T1</button>
+          <button class="pb" onclick="Analytics.setPeriod('T2',this)">T2</button>
+          <button class="pb" onclick="Analytics.setPeriod('2026',this)">2026</button>
+        </div>
+      </div>
+      <div class="kg" id="finKpis"></div>
+      <div class="cg">
+        <div class="chart-card" style="grid-column:1/-1;">
+          <h4>📅 Détail mensuel — Ventes / Achats / Charges / Résultat</h4>
+          <canvas id="chartFinDetail" height="240"></canvas>
+        </div>
+        <div class="chart-card">
+          <h4>🥧 Répartition des charges fixes</h4>
+          <canvas id="chartCharges" height="240"></canvas>
+        </div>
+        <div class="sec" style="margin-bottom:0;">
+          <h3>TVA — Synthèse annuelle</h3>
+          <div id="tvaTable"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VUE : CHANTIERS -->
+    <div class="view" id="view-chantiers">
+      <div class="sh"><div class="st">🏗 Analytics Chantiers</div></div>
+      <div class="kg" id="chantKpis"></div>
+      <div class="cg">
+        <div class="sec" style="margin-bottom:0;">
+          <h3>Budget vs Dépenses par chantier</h3>
+          <div id="chantBudgetTable"></div>
+        </div>
+        <div class="chart-card">
+          <h4>📊 Chantiers par statut</h4>
+          <canvas id="chartChantStatus" height="240"></canvas>
+        </div>
+      </div>
+      <div class="sec">
+        <h3>Planning de charge — Chantiers en cours</h3>
+        <div id="chantPlanning"></div>
+      </div>
+    </div>
+
+    <!-- VUE : FACTURATION -->
+    <div class="view" id="view-facturation">
+      <div class="sh"><div class="st">🧾 Analytics Facturation</div></div>
+      <div class="kg" id="factKpis"></div>
+      <div class="dual">
+        <div class="chart-card">
+          <h4>Devis — Taux de conversion mensuel</h4>
+          <canvas id="chartConversion" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+          <h4>💸 Encaissement — Répartition TTC</h4>
+          <canvas id="chartEncaissement" height="200"></canvas>
+        </div>
+      </div>
+      <div class="sec">
+        <h3>Détail par statut</h3>
+        <div id="factStatusDetail"></div>
+      </div>
+    </div>
+
+    <!-- VUE : PERFORMANCE -->
+    <div class="view" id="view-performance">
+      <div class="sh"><div class="st">📈 Tableau de Performance</div></div>
+      <div class="tri" id="scoreCards"></div>
+      <div class="sec"><h3>Objectifs 2026 — Suivi KPIs</h3><div id="objectifsTable"></div></div>
+      <div class="sec"><h3>Benchmarks sectoriels BTP — Loiret</h3><div id="benchmarks"></div></div>
+    </div>
+
+    <!-- VUE : RAPPORT MENSUEL -->
+    <div class="view" id="view-rapport-mensuel">
+      <div class="sh">
+        <div class="st">📄 Rapport Mensuel</div>
+        <div style="display:flex;gap:8px;">
+          <select id="moisSelect" class="bg2" style="color:var(--ac);font-family:'DM Sans',sans-serif;" onchange="Analytics.genRapportMensuel()">
+            <option value="0">Janvier</option><option value="1">Février</option>
+            <option value="2">Mars</option><option value="3" selected>Avril</option>
+            <option value="4">Mai</option><option value="5">Juin</option>
+            <option value="6">Juillet</option><option value="7">Août</option>
+            <option value="8">Septembre</option><option value="9">Octobre</option>
+            <option value="10">Novembre</option><option value="11">Décembre</option>
+          </select>
+          <button class="bou" onclick="Analytics.genRapportMensuel()">📄 Générer</button>
+          <button class="bo" onclick="window.print();VilarCore.toast.show('Impression en cours…','sv')">🖨 Imprimer</button>
+        </div>
+      </div>
+      <div id="rapportMensuelContent"></div>
+    </div>
+
+    <!-- VUE : BILAN ANNUEL -->
+    <div class="view" id="view-rapport-annuel">
+      <div class="sh">
+        <div class="st">📊 Bilan Annuel 2026</div>
+        <button class="bou" onclick="window.print()">🖨 Imprimer / PDF</button>
+      </div>
+      <div id="bilanContent"></div>
+    </div>
+
+  </main>
+
+  <!-- ================================================================
+       LOGIQUE MÉTIER — Analytics & Rapports
+       IIFE : zéro variable globale, Safari iOS compatible
+  ================================================================ -->
+  <script>
+  (function () {
+    'use strict';
+
+    /* ── Raccourcis core ── */
+    const { db, bus, toast, nav, ui, pwa, safeIcons, utils,
+            MOIS, MA, TODAY } = VilarCore;
+    const $ = utils.$;
+
+    /* ── Formatters locaux ── */
+    const fmt    = n => Number(n || 0).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' €';
+    const fmtPct = n => Number(n || 0).toFixed(1) + '%';
+
+    /* ── DB keys des autres modules (AppBus v2 + fallback legacy) ── */
+    const BUS_KEYS = {
+      compta:      'dashboard',    // snapshot publié par Dashboard
+      chantiers:   'chantiers',    // snapshot publié par Chantiers
+      facturation: 'facturation',  // snapshot publié par Facturation
+      docs:        'docs',         // snapshot publié par DocsRGE
+    };
+
+    // Legacy v1 : anciennes DB isolées (fallback si snapshots absents)
+    const LEGACY = {
+      compta:      { db: 'VilarDS_DB',          store: 'vilardata',    key: 'dashboard'   },
+      chantiers:   { db: 'VilarDS_Chantiers_DB', store: 'chantierdata', key: 'chantiers'   },
+      facturation: { db: 'VilarDS_Fact_DB',      store: 'factdata',     key: 'facturation' },
+      docs:        { db: 'VilarDS_Docs_DB',      store: 'docsdata',     key: 'docs'        },
+    };
+
+    /* ════════════════════════════════════════════════════════════════
+       DONNÉES CONSOLIDÉES
+    ════════════════════════════════════════════════════════════════ */
+    let DATA = {
+      compta:      null,
+      chantiers:   null,
+      facturation: null,
+      docs:        null,
+      lastSync:    null,
+    };
+
+    // Données démo réalistes (si aucun module n'a encore publié)
+    const DEMO = {
+      compta: {
+        ventes: [
+          { mois:'Janvier',  ht:8500,  tva:10 }, { mois:'Janvier',  ht:3200,  tva:10 },
+          { mois:'Février',  ht:12400, tva:20 }, { mois:'Février',  ht:6800,  tva:10 },
+          { mois:'Mars',     ht:4100,  tva:20 }, { mois:'Mars',     ht:7200,  tva:10 },
+          { mois:'Avril',    ht:18500, tva:20 }, { mois:'Avril',    ht:3400,  tva:5.5 },
+          { mois:'Mai',      ht:9800,  tva:10 }, { mois:'Mai',      ht:2600,  tva:10 },
+          { mois:'Juin',     ht:22000, tva:20 }, { mois:'Juin',     ht:5100,  tva:10 },
+        ],
+        achats: [
+          { mois:'Janvier',  ht:1840, tva:20 }, { mois:'Janvier',  ht:620,  tva:20 },
+          { mois:'Février',  ht:3100, tva:20 }, { mois:'Février',  ht:2200, tva:5.5 },
+          { mois:'Mars',     ht:1450, tva:20 }, { mois:'Mars',     ht:2800, tva:20 },
+          { mois:'Avril',    ht:4200, tva:20 }, { mois:'Avril',    ht:1800, tva:5.5 },
+          { mois:'Mai',      ht:3900, tva:20 }, { mois:'Mai',      ht:380,  tva:20 },
+          { mois:'Juin',     ht:5600, tva:20 }, { mois:'Juin',     ht:1200, tva:20 },
+        ],
+        charges: [
+          { cat:'Assurance',     mensuel:320, tva:0  }, { cat:'Véhicule',   mensuel:680, tva:20 },
+          { cat:'Véhicule',      mensuel:450, tva:20 }, { cat:'Télécom',    mensuel:85,  tva:20 },
+          { cat:'Logiciels',     mensuel:60,  tva:20 }, { cat:'Comptabilité', mensuel:350, tva:20 },
+          { cat:'Cotisations',   mensuel:95,  tva:0  }, { cat:'Local',      mensuel:500, tva:20 },
+          { cat:'Outillage',     mensuel:200, tva:20 }, { cat:'Divers',     mensuel:75,  tva:0  },
+          { cat:'Communication', mensuel:150, tva:20 }, { cat:'EPI',        mensuel:80,  tva:20 },
+        ],
+      },
+      chantiers: {
+        chantiers: [
+          { ref:'VDS-001', titre:'Extension R+1 Olivet',      client:'Fontaine', statut:'en-cours',  budget:42000, avanc:65,  depenses:[{mont:3200},{mont:1400},{mont:8500}] },
+          { ref:'VDS-002', titre:'ITE RGE Chécy',             client:'Chavot',   statut:'en-cours',  budget:18500, avanc:40,  depenses:[{mont:4200},{mont:1800}] },
+          { ref:'VDS-003', titre:'Rénovation SdB Mardié',     client:'Aubert',   statut:'en-cours',  budget:9800,  avanc:80,  depenses:[{mont:1100},{mont:1900}] },
+          { ref:'VDS-004', titre:'Construction T4',           client:'Perrin',   statut:'en-cours',  budget:68000, avanc:25,  depenses:[{mont:5600},{mont:3100},{mont:2200}] },
+          { ref:'VDS-005', titre:'Toiture Ingré',             client:'Morin',    statut:'planifie',  budget:14200, avanc:0,   depenses:[] },
+          { ref:'VDS-006', titre:'Ravalement + combles',      client:'Delorme',  statut:'devis',     budget:22000, avanc:0,   depenses:[] },
+          { ref:'VDS-007', titre:'Clôture + portail Semoy',   client:'Tessier',  statut:'devis',     budget:7800,  avanc:0,   depenses:[] },
+          { ref:'VDS-008', titre:'Extension bois',            client:'Garcia',   statut:'devis',     budget:38000, avanc:0,   depenses:[] },
+          { ref:'VDS-009', titre:'Dalle garage Combleux',     client:'Laurent',  statut:'termine',   budget:6400,  avanc:100, depenses:[{mont:2800}] },
+          { ref:'VDS-010', titre:'Isolation combles Jargeau', client:'Blanchard',statut:'termine',   budget:3800,  avanc:100, depenses:[{mont:1200}] },
+        ],
+      },
+      facturation: {
+        docs: [
+          { ref:'DEV-001', type:'devis',   statut:'accepte', client:'Laurent',   objet:'Dalle garage',    ttc:7040    },
+          { ref:'DEV-002', type:'devis',   statut:'accepte', client:'Blanchard', objet:'Isolation',       ttc:4181.4  },
+          { ref:'DEV-003', type:'devis',   statut:'envoye',  client:'Fontaine',  objet:'Extension R+1',   ttc:57936   },
+          { ref:'DEV-004', type:'devis',   statut:'envoye',  client:'Delorme',   objet:'Ravalement',      ttc:24090   },
+          { ref:'DEV-005', type:'devis',   statut:'brouillon',client:'Tessier',  objet:'Clôture',         ttc:9240    },
+          { ref:'FAC-001', type:'facture', statut:'paye',    client:'Laurent',   objet:'Dalle solde',     ttc:4928    },
+          { ref:'FAC-002', type:'facture', statut:'paye',    client:'Blanchard', objet:'Isolation solde', ttc:2929.8  },
+          { ref:'FAC-003', type:'facture', statut:'retard',  client:'Chavot',    objet:'ITE Situation 1', ttc:8140    },
+          { ref:'FAC-004', type:'facture', statut:'envoye',  client:'Aubert',    objet:'SdB Acompte',     ttc:3234    },
+        ],
+      },
+    };
+
+    /* ════════════════════════════════════════════════════════════════
+       CALCULS COMPTA
+    ════════════════════════════════════════════════════════════════ */
+    const Calc = {
+      ventesHT()    { return DATA.compta ? DATA.compta.ventes.reduce((s, v) => s + v.ht, 0) : 0; },
+      achatsHT()    { return DATA.compta ? DATA.compta.achats.reduce((s, a) => s + a.ht, 0) : 0; },
+      chargesAnnuel() { return DATA.compta ? DATA.compta.charges.reduce((s, c) => s + c.mensuel * 12, 0) : 0; },
+      resultatHT()  { return this.ventesHT() - this.achatsHT() - this.chargesAnnuel(); },
+      margeB()      { return this.ventesHT() > 0 ? this.resultatHT() / this.ventesHT() * 100 : 0; },
+
+      totalTVA() {
+        if (!DATA.compta) return { coll: 0, ded: 0, net: 0 };
+        const coll = DATA.compta.ventes.reduce((s, v) => s + v.ht * v.tva / 100, 0);
+        const dedA = DATA.compta.achats.reduce((s, a) => s + a.ht * a.tva / 100, 0);
+        const dedC = DATA.compta.charges.reduce((s, c) => s + c.mensuel * 12 * c.tva / 100, 0);
+        return { coll, ded: dedA + dedC, net: coll - dedA - dedC };
+      },
+
+      moisData(moisNom) {
+        const v = DATA.compta ? DATA.compta.ventes.filter(x => x.mois === moisNom).reduce((s, x) => s + x.ht, 0) : 0;
+        const a = DATA.compta ? DATA.compta.achats.filter(x => x.mois === moisNom).reduce((s, x) => s + x.ht, 0) : 0;
+        const c = DATA.compta ? DATA.compta.charges.reduce((s, x) => s + x.mensuel, 0) : 0;
+        return { v, a, c, r: v - a - c };
+      },
+
+      budgetChantiers()  { return DATA.chantiers ? DATA.chantiers.chantiers.reduce((s, c) => s + c.budget, 0) : 0; },
+      depensesChantiers(){ return DATA.chantiers ? DATA.chantiers.chantiers.reduce((s, c) => s + c.depenses.reduce((ss, d) => ss + d.mont, 0), 0) : 0; },
+
+      caFacturation() {
+        return DATA.facturation
+          ? DATA.facturation.docs.filter(d => d.type === 'facture').reduce((s, d) => s + d.ttc, 0)
+          : 0;
+      },
+      caEncaisse() {
+        return DATA.facturation
+          ? DATA.facturation.docs.filter(d => d.type === 'facture' && d.statut === 'paye').reduce((s, d) => s + d.ttc, 0)
+          : 0;
+      },
+      impayesMt() {
+        return DATA.facturation
+          ? DATA.facturation.docs.filter(d => d.type === 'facture' && (d.statut === 'retard' || d.statut === 'envoye')).reduce((s, d) => s + d.ttc, 0)
+          : 0;
+      },
+      tauxConv() {
+        if (!DATA.facturation) return 0;
+        const devis = DATA.facturation.docs.filter(d => d.type === 'devis');
+        const acc   = devis.filter(d => d.statut === 'accepte' || d.statut === 'facture');
+        return devis.length > 0 ? acc.length / devis.length * 100 : 0;
+      },
+    };
+
+    /* ════════════════════════════════════════════════════════════════
+       SYNCHRONISATION — AppBus v2 + fallback legacy v1
+    ════════════════════════════════════════════════════════════════ */
+    async function syncAllData() {
+      toast.show('Synchronisation en cours…', 'sv', 4000);
+      try {
+        // Essai 1 : AppBus v2 (snapshots publiés par les modules refactorisés)
+        const snapshots = await bus.readAll(Object.values(BUS_KEYS));
+
+        // Essai 2 : fallback legacy v1 pour les modules non encore refactorisés
+        async function readLegacy(key) {
+          const lg = LEGACY[key];
+          return db.getExternal(lg.db, lg.store, lg.key);
+        }
+
+        // Compta
+        const snap_c = snapshots[BUS_KEYS.compta];
+        const raw_c  = snap_c || await readLegacy('compta');
+        DATA.compta = raw_c
+          ? { ventes: raw_c.ventes || [], achats: raw_c.achats || [], charges: raw_c.charges || [] }
+          : DEMO.compta;
+
+        // Chantiers
+        const snap_ch = snapshots[BUS_KEYS.chantiers];
+        const raw_ch  = snap_ch || await readLegacy('chantiers');
+        DATA.chantiers = raw_ch
+          ? { chantiers: raw_ch.chantiers || [] }
+          : DEMO.chantiers;
+
+        // Facturation
+        const snap_f = snapshots[BUS_KEYS.facturation];
+        const raw_f  = snap_f || await readLegacy('facturation');
+        DATA.facturation = raw_f
+          ? { docs: raw_f.docs || [] }
+          : DEMO.facturation;
+
+        // Docs (optionnel)
+        const snap_d = snapshots[BUS_KEYS.docs];
+        DATA.docs = snap_d || await readLegacy('docs') || null;
+
+        DATA.lastSync = new Date().toISOString();
+
+        // Indicateur
+        const syncEl = $('lastSync');
+        if (syncEl) {
+          syncEl.textContent = 'Synchro : ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        const saveDot = $('saveDot'), saveTxt = $('saveText');
+        if (saveDot) { saveDot.className = 'sdot'; saveDot.style.background = 'var(--vll)'; }
+        if (saveTxt) saveTxt.textContent = 'Données chargées';
+
+        toast.show('Données synchronisées ✓', 'ok');
+        Analytics.refreshAll();
+      } catch (e) {
+        // Fallback total : données démo
+        DATA.compta      = DEMO.compta;
+        DATA.chantiers   = DEMO.chantiers;
+        DATA.facturation = DEMO.facturation;
+        toast.show('Modules non trouvés — données démo', 'sv');
+        Analytics.refreshAll();
+      }
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       CHART.JS — Options partagées
+    ════════════════════════════════════════════════════════════════ */
+    const CHART_OPT = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#B8C8D8', font: { size: 11 }, boxWidth: 12 } },
+      },
+      scales: {
+        x: { ticks: { color: '#7A8FA6', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,.04)' } },
+        y: { ticks: { color: '#7A8FA6', font: { size: 11 }, callback: v => (v / 1000).toFixed(0) + 'k€' }, grid: { color: 'rgba(255,255,255,.06)' } },
+      },
+    };
+
+    const CHART_OPT_DONUT = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: '#B8C8D8', font: { size: 10 }, boxWidth: 11, padding: 8 } } },
+    };
+
+    const COLORS = ['#C8A84B','#4A7BA8','#A78BFA','#4ADE80','#F87171','#FB923C','#22D3EE'];
+    const _charts = {};
+
+    function mkChart(id, config) {
+      if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; }
+      const el = $(id);
+      if (!el) return;
+      _charts[id] = new Chart(el, config);
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       RENDUS
+    ════════════════════════════════════════════════════════════════ */
+    const Analytics = {
+
+      /* ── Overview ── */
+      renderOverview() {
+        const res = Calc.resultatHT(), marg = Calc.margeB();
+        const budC = Calc.budgetChantiers(), caF = Calc.caFacturation();
+
+        $('overviewKpis').innerHTML = [
+          { l:'CA Comptabilité HT',  v:fmt(Calc.ventesHT()),   s:'Ventes saisies 2026',         c:'co'                                     },
+          { l:'Résultat net HT',     v:fmt(res),               s:'Ventes − Achats − Charges',   c: res  >= 0 ? 'cv' : 'cr'                 },
+          { l:'Marge brute',         v:fmtPct(marg),           s:'Sur CA comptabilité',         c: marg >= 15 ? 'cv' : 'cr'                },
+          { l:'Budget chantiers',    v:fmt(budC),              s:'Tous projets 2026',           c:'cb'                                     },
+          { l:'CA Facturé TTC',      v:fmt(caF),               s:'Depuis module Facturation',   c:'cj'                                     },
+          { l:'Impayés',             v:fmt(Calc.impayesMt()),  s:'Factures en retard/attente',  c: Calc.impayesMt() > 0 ? 'cr' : 'cv'     },
+        ].map(k => `
+          <div class="kpi ${k.c}">
+            <div class="kl">${k.l}</div>
+            <div class="kv">${k.v}</div>
+            <div class="ks">${k.s}</div>
+          </div>`).join('');
+
+        // Chart CA mensuel
+        const idxsActifs = MOIS.map((_, i) => i).filter(i => Calc.moisData(MOIS[i]).v > 0);
+        const idxs = idxsActifs.length > 0 ? idxsActifs : [0, 1, 2, 3, 4, 5];
+        const labels = idxs.map(i => MA[i]);
+
+        mkChart('chartCA', {
+          type: 'bar',
+          data: { labels, datasets: [
+            { label:'Ventes HT',   data: idxs.map(i => Calc.moisData(MOIS[i]).v), backgroundColor:'rgba(200,168,75,.7)', borderRadius:4 },
+            { label:'Résultat HT', data: idxs.map(i => Calc.moisData(MOIS[i]).r), type:'line', borderColor:'#4ADE80', backgroundColor:'rgba(74,222,128,.08)', borderWidth:2, tension:.4, fill:true, pointRadius:4 },
+          ] },
+          options: { ...CHART_OPT },
+        });
+
+        // Chart activité chantiers (budget par statut)
+        const ch = DATA.chantiers?.chantiers || [];
+        const byType = {};
+        ch.forEach(c => { byType[c.statut] = (byType[c.statut] || 0) + c.budget; });
+        const STATUT_LABELS = { 'en-cours':'En cours', planifie:'Planifié', devis:'Devis', termine:'Terminé', 'en-pause':'En pause' };
+        mkChart('chartActivite', {
+          type: 'doughnut',
+          data: { labels: Object.keys(byType).map(k => STATUT_LABELS[k] || k), datasets: [{ data: Object.values(byType), backgroundColor: COLORS, borderColor: '#162436', borderWidth: 2 }] },
+          options: { ...CHART_OPT_DONUT, cutout: '60%' },
+        });
+
+        // Chart statuts (nb)
+        const statuts = {};
+        ch.forEach(c => { statuts[c.statut] = (statuts[c.statut] || 0) + 1; });
+        mkChart('chartChantiers', {
+          type: 'doughnut',
+          data: { labels: Object.keys(statuts).map(k => STATUT_LABELS[k] || k), datasets: [{ data: Object.values(statuts), backgroundColor: COLORS, borderColor: '#162436', borderWidth: 2 }] },
+          options: { ...CHART_OPT_DONUT, cutout: '55%' },
+        });
+
+        // Chart performance (horizontal bar)
+        mkChart('chartPerf', {
+          type: 'bar',
+          data: {
+            labels: ['Marge brute','Taux conv.','Budget chantiers','Encaissement'],
+            datasets: [{ data: [
+              Math.min(100, Math.max(0, marg)),
+              Calc.tauxConv(),
+              Math.min(100, Calc.depensesChantiers() / Math.max(1, budC) * 100),
+              Math.min(100, caF > 0 ? Calc.caEncaisse() / caF * 100 : 0),
+            ], backgroundColor: ['rgba(200,168,75,.7)','rgba(74,123,168,.7)','rgba(74,222,128,.7)','rgba(234,179,8,.7)'], borderRadius: 4 }],
+          },
+          options: { ...CHART_OPT, indexAxis:'y', plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#7A8FA6', font:{ size:11 }, callback: v => v + '%' }, grid:{ color:'rgba(255,255,255,.06)' }, max:100 }, y:{ ticks:{ color:'#7A8FA6', font:{ size:11 } }, grid:{ color:'rgba(255,255,255,.04)' } } } },
+        });
+      },
+
+      /* ── Financier ── */
+      renderFinancier() {
+        const res = Calc.resultatHT(), tva = Calc.totalTVA();
+        $('finKpis').innerHTML = [
+          { l:'Ventes HT',        v:fmt(Calc.ventesHT()),    c:'co' },
+          { l:'Achats HT',        v:fmt(Calc.achatsHT()),    c:'cb' },
+          { l:'Charges annuelles',v:fmt(Calc.chargesAnnuel()), c:'col' },
+          { l:'Résultat HT',      v:fmt(res),                c: res >= 0 ? 'cv' : 'cr' },
+          { l:'TVA nette',        v:fmt(Math.max(0, tva.net)), c:'cj' },
+          { l:'Marge brute',      v:fmtPct(Calc.margeB()),   c: Calc.margeB() >= 15 ? 'cv' : 'cr' },
+        ].map(k => `<div class="kpi ${k.c}"><div class="kl">${k.l}</div><div class="kv">${k.v}</div></div>`).join('');
+
+        const idxs = MOIS.map((_, i) => i).filter(i => Calc.moisData(MOIS[i]).v > 0 || i < 4);
+        mkChart('chartFinDetail', {
+          type: 'bar',
+          data: { labels: idxs.map(i => MA[i]), datasets: [
+            { label:'Ventes HT',  data: idxs.map(i => Calc.moisData(MOIS[i]).v), backgroundColor:'rgba(200,168,75,.7)', borderRadius:3 },
+            { label:'Achats HT',  data: idxs.map(i => Calc.moisData(MOIS[i]).a), backgroundColor:'rgba(74,123,168,.6)',  borderRadius:3 },
+            { label:'Charges',    data: idxs.map(i => Calc.moisData(MOIS[i]).c), backgroundColor:'rgba(192,92,26,.6)',   borderRadius:3 },
+            { label:'Résultat',   data: idxs.map(i => Calc.moisData(MOIS[i]).r), type:'line', borderColor:'#4ADE80', borderWidth:2, tension:.4, fill:false, pointRadius:4 },
+          ] },
+          options: CHART_OPT,
+        });
+
+        if (DATA.compta) {
+          const cats = {};
+          DATA.compta.charges.forEach(c => { cats[c.cat] = (cats[c.cat] || 0) + c.mensuel * 12; });
+          mkChart('chartCharges', {
+            type: 'doughnut',
+            data: { labels: Object.keys(cats), datasets: [{ data: Object.values(cats), backgroundColor: COLORS, borderColor: '#162436', borderWidth: 2 }] },
+            options: { ...CHART_OPT_DONUT, cutout: '60%' },
+          });
+        }
+
+        $('tvaTable').innerHTML = `
+          <table class="dtb">
+            <thead><tr><th>Libellé</th><th>Montant</th></tr></thead>
+            <tbody>
+              <tr><td>TVA collectée (ventes)</td><td class="montant or">${fmt(tva.coll)}</td></tr>
+              <tr><td>TVA déductible (achats)</td><td class="montant">${fmt(tva.ded)}</td></tr>
+              <tr class="total-row"><td>TVA nette à reverser</td><td class="montant">${fmt(Math.max(0, tva.net))}</td></tr>
+            </tbody>
+          </table>
+          <div style="margin-top:12px;font-size:11.5px;color:var(--af);">
+            ℹ Régime réel simplifié — CA12 trimestriel. Consultez votre expert-comptable.
+          </div>`;
+      },
+
+      /* ── Chantiers ── */
+      renderChantiers() {
+        const ch   = DATA.chantiers?.chantiers || [];
+        const budT = ch.reduce((s, c) => s + c.budget, 0);
+        const depT = ch.reduce((s, c) => s + c.depenses.reduce((ss, d) => ss + d.mont, 0), 0);
+        const avgAv = ch.length > 0 ? ch.reduce((s, c) => s + c.avanc, 0) / ch.length : 0;
+
+        $('chantKpis').innerHTML = [
+          { l:'Total chantiers',    v:ch.length,                                       c:'cb' },
+          { l:'En cours',           v:ch.filter(x => x.statut === 'en-cours').length,   c:'cj' },
+          { l:'Budget total',       v:fmt(budT),                                       c:'co' },
+          { l:'Dépenses saisies',   v:fmt(depT),                                       c:'col' },
+          { l:'Avancement moyen',   v:Math.round(avgAv) + '%',                         c:'cv' },
+          { l:'Devis en attente',   v:ch.filter(x => x.statut === 'devis').length,     c:'cr' },
+        ].map(k => `<div class="kpi ${k.c}"><div class="kl">${k.l}</div><div class="kv">${k.v}</div></div>`).join('');
+
+        const sorted = [...ch].sort((a, b) => b.budget - a.budget).slice(0, 8);
+        $('chantBudgetTable').innerHTML = `
+          <table class="dtb">
+            <thead><tr><th>Réf.</th><th>Client</th><th>Budget HT</th><th>Dépenses</th><th>%</th><th>Avancé</th></tr></thead>
+            <tbody>${sorted.map(c => {
+              const dep = c.depenses.reduce((s, d) => s + d.mont, 0);
+              const pct = c.budget > 0 ? Math.round(dep / c.budget * 100) : 0;
+              const cls = pct > 90 ? 'neg' : pct > 70 ? 'or' : 'pos';
+              return `<tr>
+                <td style="font-weight:600;font-size:11px;">${c.ref}</td>
+                <td>${c.client}</td>
+                <td class="montant or">${fmt(c.budget)}</td>
+                <td class="montant">${fmt(dep)}</td>
+                <td class="montant ${cls}">${pct}%</td>
+                <td><div class="prog-track" style="width:80px;"><div class="prog-fill pf-or" style="width:${c.avanc}%"></div></div></td>
+              </tr>`;
+            }).join('')}</tbody>
+            <tfoot><tr class="total-row"><td colspan="2">TOTAL</td><td class="montant">${fmt(budT)}</td><td class="montant">${fmt(depT)}</td><td class="montant">${budT > 0 ? Math.round(depT / budT * 100) : 0}%</td><td></td></tr></tfoot>
+          </table>`;
+
+        const statuts = {};
+        ch.forEach(c => { statuts[c.statut] = (statuts[c.statut] || 0) + 1; });
+        const SL = { 'en-cours':'En cours', planifie:'Planifié', devis:'Devis', termine:'Terminé', 'en-pause':'Pause' };
+        mkChart('chartChantStatus', {
+          type: 'bar',
+          data: { labels: Object.keys(statuts).map(k => SL[k] || k), datasets: [{ data: Object.values(statuts), backgroundColor: COLORS, borderRadius: 6 }] },
+          options: { ...CHART_OPT, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#7A8FA6', font:{ size:11 } }, grid:{ color:'rgba(255,255,255,.04)' } }, y:{ ticks:{ color:'#7A8FA6', font:{ size:11 }, stepSize:1 }, grid:{ color:'rgba(255,255,255,.06)' } } } },
+        });
+
+        const actifs = ch.filter(c => c.statut === 'en-cours');
+        $('chantPlanning').innerHTML = actifs.length === 0
+          ? '<div class="empty">Aucun chantier en cours.</div>'
+          : actifs.map(c => `
+              <div style="margin-bottom:14px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                  <div>
+                    <span style="font-weight:600;font-size:13px;">${c.ref}</span>
+                    <span style="color:var(--af);font-size:12px;"> — ${c.client}</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="color:var(--af);font-size:11px;">Budget : <strong style="color:var(--or);">${fmt(c.budget)}</strong></span>
+                    <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:var(--or);">${c.avanc}%</span>
+                  </div>
+                </div>
+                <div class="prog-track" style="height:8px;"><div class="prog-fill pf-or" style="width:${c.avanc}%"></div></div>
+              </div>`).join('');
+      },
+
+      /* ── Facturation ── */
+      renderFacturation() {
+        const docs     = DATA.facturation?.docs || [];
+        const devis    = docs.filter(d => d.type === 'devis');
+        const factures = docs.filter(d => d.type === 'facture');
+        const caF      = factures.reduce((s, d) => s + d.ttc, 0);
+        const caPaye   = factures.filter(d => d.statut === 'paye').reduce((s, d) => s + d.ttc, 0);
+        const impayes  = factures.filter(d => d.statut === 'retard' || d.statut === 'envoye').reduce((s, d) => s + d.ttc, 0);
+
+        $('factKpis').innerHTML = [
+          { l:'Total devis',       v:devis.length,                                                         c:'cb' },
+          { l:'Devis acceptés',    v:devis.filter(d => d.statut === 'accepte' || d.statut === 'facture').length, c:'cv' },
+          { l:'Taux conversion',   v:fmtPct(Calc.tauxConv()),                                              c: Calc.tauxConv() >= 50 ? 'cv' : 'cr' },
+          { l:'CA facturé TTC',    v:fmt(caF),                                                             c:'co' },
+          { l:'CA encaissé',       v:fmt(caPaye),                                                         c:'cv' },
+          { l:'Impayés TTC',       v:fmt(impayes),                                                        c: impayes > 0 ? 'cr' : 'cv' },
+        ].map(k => `<div class="kpi ${k.c}"><div class="kl">${k.l}</div><div class="kv">${k.v}</div></div>`).join('');
+
+        mkChart('chartConversion', {
+          type: 'bar',
+          data: { labels:['Jan','Fév','Mar','Avr','Mai','Jun'], datasets:[
+            { label:'Devis envoyés', data:[2,1,3,2,1,2], backgroundColor:'rgba(74,123,168,.5)', borderRadius:4 },
+            { label:'Acceptés',      data:[1,1,2,1,0,1], backgroundColor:'rgba(74,222,128,.6)', borderRadius:4 },
+          ] },
+          options: { ...CHART_OPT, scales:{ x:{ ticks:{ color:'#7A8FA6', font:{ size:11 } }, grid:{ color:'rgba(255,255,255,.04)' } }, y:{ ticks:{ color:'#7A8FA6', font:{ size:11 }, stepSize:1 }, grid:{ color:'rgba(255,255,255,.06)' } } } },
+        });
+
+        mkChart('chartEncaissement', {
+          type: 'doughnut',
+          data: {
+            labels: ['Encaissé','En attente','Retard'],
+            datasets: [{ data: [
+              caPaye,
+              factures.filter(d => d.statut === 'envoye').reduce((s, d) => s + d.ttc, 0),
+              factures.filter(d => d.statut === 'retard').reduce((s, d) => s + d.ttc, 0),
+            ], backgroundColor:['#4ADE80','#EAB308','#F87171'], borderColor:'#162436', borderWidth:2 }],
+          },
+          options: { ...CHART_OPT_DONUT, cutout:'55%' },
+        });
+
+        const STATUTS = { brouillon:'Brouillon', envoye:'Envoyé/e', accepte:'Accepté', refuse:'Refusé', facture:'Facturé', paye:'Payé', retard:'Retard', partiel:'Partiel' };
+        const SCOL    = { brouillon:'var(--af)', envoye:'var(--bc)', accepte:'var(--vll)', refuse:'var(--rll)', facture:'var(--or)', paye:'var(--vll)', retard:'var(--rll)', partiel:'var(--jn)' };
+        $('factStatusDetail').innerHTML = `
+          <table class="dtb">
+            <thead><tr><th>Type</th><th>Statut</th><th>Nb</th><th>Montant TTC</th></tr></thead>
+            <tbody>${['devis','facture','avoir'].flatMap(type => {
+              const td = docs.filter(d => d.type === type);
+              const byS = {};
+              td.forEach(d => {
+                if (!byS[d.statut]) byS[d.statut] = { count:0, total:0 };
+                byS[d.statut].count++;
+                byS[d.statut].total += d.ttc;
+              });
+              return Object.entries(byS).map(([s, v]) =>
+                `<tr><td>${{ devis:'📋 Devis', facture:'🧾 Facture', avoir:'↩ Avoir' }[type]}</td>
+                 <td><span style="font-weight:700;color:${SCOL[s] || 'var(--ac)'};">${STATUTS[s] || s}</span></td>
+                 <td>${v.count}</td><td class="montant or">${fmt(v.total)}</td></tr>`
+              );
+            }).join('')}</tbody>
+          </table>`;
+      },
+
+      /* ── Performance ── */
+      renderPerformance() {
+        const marg    = Calc.margeB();
+        const conv    = Calc.tauxConv();
+        const caF     = Calc.caFacturation();
+        const encaissR = caF > 0 ? Calc.caEncaisse() / caF * 100 : 0;
+        const ch      = DATA.chantiers?.chantiers || [];
+
+        const scores = [
+          { label:'Score Financier',  val:Math.min(100, Math.max(0, marg * 3 + 50)),   desc:`Marge brute ${fmtPct(marg)}`,                   color:'#C8A84B' },
+          { label:'Score Chantiers',  val:Math.min(100, ch.filter(c => c.statut === 'termine').length / Math.max(1, ch.length) * 100), desc:`${ch.filter(c => c.statut === 'termine').length} terminé(s) / ${ch.length} total`, color:'#4A7BA8' },
+          { label:'Score Commercial', val:Math.min(100, conv),                         desc:`Taux conversion devis ${fmtPct(conv)}`,          color:'#4ADE80' },
+        ];
+
+        $('scoreCards').innerHTML = scores.map(s => {
+          const r   = Math.round(s.val);
+          const cls = r >= 70 ? 'cv' : r >= 40 ? 'cj' : 'cr';
+          return `
+            <div class="kpi ${cls}" style="display:flex;align-items:center;gap:14px;">
+              <div class="score-ring" style="background:${s.color}20;border:3px solid ${s.color};color:${s.color};">${r}</div>
+              <div>
+                <div class="kl">${s.label}</div>
+                <div class="kv" style="font-size:16px;">${r}/100</div>
+                <div class="ks">${s.desc}</div>
+              </div>
+            </div>`;
+        }).join('');
+
+        const objectifs = [
+          { kpi:'CA annuel 2026',         cible:180000, actuel:Calc.ventesHT(),                                                       unit:'€' },
+          { kpi:'Marge brute',            cible:20,     actuel:marg,                                                                   unit:'%' },
+          { kpi:'Taux conversion devis',  cible:60,     actuel:conv,                                                                   unit:'%' },
+          { kpi:'Taux encaissement',      cible:90,     actuel:encaissR,                                                               unit:'%' },
+          { kpi:'Chantiers terminés',     cible:6,      actuel:ch.filter(c => c.statut === 'termine').length,                         unit:''  },
+          { kpi:'Budget chantiers actifs',cible:200000, actuel:ch.filter(c => c.statut === 'en-cours').reduce((s, c) => s + c.budget, 0), unit:'€' },
+        ];
+
+        $('objectifsTable').innerHTML = `
+          <table class="dtb">
+            <thead><tr><th>KPI</th><th>Objectif</th><th>Actuel</th><th>Atteinte</th><th>Progression</th></tr></thead>
+            <tbody>${objectifs.map(o => {
+              const pct  = o.cible > 0 ? Math.min(100, Math.round(o.actuel / o.cible * 100)) : 0;
+              const cls  = pct >= 80 ? 'pos' : pct >= 50 ? 'or' : 'neg';
+              const val  = o.unit === '€' ? fmt(o.actuel) : o.unit === '%' ? fmtPct(o.actuel) : o.actuel;
+              const cible = o.unit === '€' ? fmt(o.cible) : o.unit === '%' ? fmtPct(o.cible) : o.cible;
+              return `<tr>
+                <td style="font-weight:600;">${o.kpi}</td>
+                <td class="montant">${cible}</td>
+                <td class="montant ${cls}">${val}</td>
+                <td class="montant ${cls}">${pct}%</td>
+                <td><div class="prog-track" style="width:120px;"><div class="prog-fill ${pct >= 80 ? 'pf-vl' : pct >= 50 ? 'pf-or' : 'pf-rl'}" style="width:${pct}%"></div></div></td>
+              </tr>`;
+            }).join('')}</tbody>
+          </table>`;
+
+        $('benchmarks').innerHTML = `
+          <div style="font-size:12.5px;color:var(--af);margin-bottom:12px;">Comparaison avec les moyennes sectorielles BTP / TPE France 2024-2025</div>
+          <table class="dtb">
+            <thead><tr><th>Indicateur</th><th>Vilar DS 2026</th><th>Moyenne BTP TPE</th><th>Écart</th></tr></thead>
+            <tbody>
+              <tr><td>Marge brute</td><td class="${marg >= 18 ? 'pos' : 'neg'} montant">${fmtPct(marg)}</td><td>18–22 %</td><td class="${marg >= 18 ? 'pos' : 'neg'}">${marg >= 18 ? '✓ Dans la norme' : '⚠ En dessous'}</td></tr>
+              <tr><td>Taux d'encaissement</td><td class="${encaissR >= 80 ? 'pos' : 'or'} montant">${fmtPct(encaissR)}</td><td>75–85 %</td><td class="${encaissR >= 75 ? 'pos' : 'neg'}">${encaissR >= 75 ? '✓ Dans la norme' : '⚠ À améliorer'}</td></tr>
+              <tr><td>Délai paiement moyen</td><td class="montant">~30 j</td><td>45–60 j</td><td class="pos">✓ Mieux que la moyenne</td></tr>
+              <tr><td>Taux conversion devis</td><td class="${conv >= 50 ? 'pos' : 'or'} montant">${fmtPct(conv)}</td><td>45–60 %</td><td class="${conv >= 45 ? 'pos' : 'neg'}">${conv >= 45 ? '✓ Dans la norme' : '⚠ À améliorer'}</td></tr>
+              <tr><td>Charges fixes / CA</td><td class="montant">${Calc.ventesHT() > 0 ? fmtPct(Calc.chargesAnnuel() / Calc.ventesHT() * 100) : '—'}</td><td>15–25 %</td><td class="pos">ℹ Surveiller</td></tr>
+            </tbody>
+          </table>`;
+      },
+
+      /* ── Rapport mensuel ── */
+      genRapportMensuel() {
+        const moisIdx = parseInt($('moisSelect')?.value ?? 3);
+        const moisNom = MOIS[moisIdx];
+        const d       = Calc.moisData(moisNom);
+        const ch      = DATA.chantiers?.chantiers || [];
+        const actifs  = ch.filter(c => c.statut === 'en-cours');
+
+        $('rapportMensuelContent').innerHTML = `
+          <div class="rapport-card" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+            <div>
+              <div style="font-size:9.5px;color:var(--af);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">SARL Vilar DS · SIREN 495 126 344</div>
+              <div class="rapport-title">Rapport Mensuel — ${moisNom} 2026</div>
+              <div class="rapport-desc">Généré le ${new Date().toLocaleDateString('fr-FR')} · Tous corps d'état · RGE</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--or);">${fmt(d.v)}</div>
+              <div style="font-size:11px;color:var(--af);">CA HT du mois</div>
+            </div>
+          </div>
+
+          <div class="kg" style="margin-bottom:16px;">${[
+            { l:'Ventes HT',    v:fmt(d.v), c:'co' },
+            { l:'Achats HT',    v:fmt(d.a), c:'cb' },
+            { l:'Charges fixes',v:fmt(d.c), c:'col' },
+            { l:'Résultat HT',  v:fmt(d.r), c: d.r >= 0 ? 'cv' : 'cr' },
+          ].map(k => `<div class="kpi ${k.c}"><div class="kl">${k.l}</div><div class="kv">${k.v}</div></div>`).join('')}</div>
+
+          <div class="sec">
+            <h3>Chantiers actifs ce mois</h3>
+            ${actifs.length === 0 ? '<div class="empty">Aucun chantier actif.</div>' : `
+              <table class="dtb">
+                <thead><tr><th>Réf.</th><th>Chantier</th><th>Client</th><th>Budget HT</th><th>Avancement</th></tr></thead>
+                <tbody>${actifs.map(c => `
+                  <tr>
+                    <td style="font-weight:600;">${c.ref}</td>
+                    <td>${c.titre || c.ref}</td>
+                    <td>${c.client}</td>
+                    <td class="montant or">${fmt(c.budget)}</td>
+                    <td>
+                      <div style="display:flex;align-items:center;gap:8px;">
+                        <div class="prog-track" style="width:80px;"><div class="prog-fill pf-or" style="width:${c.avanc}%"></div></div>
+                        <strong style="color:var(--or);">${c.avanc}%</strong>
+                      </div>
+                    </td>
+                  </tr>`).join('')}</tbody>
+              </table>`}
+          </div>
+
+          <div class="sec">
+            <h3>Cumul annuel 2026 (au ${moisNom})</h3>
+            <table class="dtb">
+              <thead><tr><th>Indicateur</th><th>Cumul HT</th><th>Objectif annuel</th><th>%</th></tr></thead>
+              <tbody>
+                <tr><td>Chiffre d'affaires</td><td class="montant or">${fmt(Calc.ventesHT())}</td><td class="montant">${fmt(180000)}</td><td class="${Calc.ventesHT() / 180000 >= 0.5 ? 'pos' : 'or'} montant">${fmtPct(Calc.ventesHT() / 180000 * 100)}</td></tr>
+                <tr><td>Résultat net</td><td class="montant ${Calc.resultatHT() >= 0 ? 'pos' : 'neg'}">${fmt(Calc.resultatHT())}</td><td class="montant">—</td><td>—</td></tr>
+                <tr><td>Marge brute</td><td class="montant ${Calc.margeB() >= 15 ? 'pos' : 'neg'}">${fmtPct(Calc.margeB())}</td><td class="montant">≥ 20%</td><td class="${Calc.margeB() >= 20 ? 'pos' : 'or'} montant">${Calc.margeB() >= 20 ? '✓ Atteint' : '⚠ En cours'}</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="text-align:center;padding:16px;font-size:11px;color:var(--af);border-top:1px solid var(--bd);margin-top:8px;">
+            Rapport confidentiel — SARL Vilar DS · Usage interne · Données IndexedDB
+          </div>`;
+
+        toast.show(`Rapport ${moisNom} généré ✓`, 'ok');
+      },
+
+      /* ── Bilan annuel ── */
+      renderBilanAnnuel() {
+        const ch  = DATA.chantiers?.chantiers || [];
+        const tva = Calc.totalTVA();
+        $('bilanContent').innerHTML = `
+          <div class="rapport-card">
+            <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--or);">BILAN ANNUEL 2026</div>
+            <div style="font-size:13px;color:var(--am);margin-top:4px;">SARL Vilar DS · SIREN 495 126 344 · Semoy (45400) · Tous corps d'état · RGE</div>
+          </div>
+
+          <div class="dual">
+            <div class="sec" style="margin-bottom:0;">
+              <h3>Compte de résultat simplifié</h3>
+              <table class="dtb">
+                <tr><td style="font-weight:700;">PRODUITS</td><td></td></tr>
+                <tr><td style="padding-left:20px;">Chiffre d'affaires HT</td><td class="montant or">${fmt(Calc.ventesHT())}</td></tr>
+                <tr style="border-top:1px solid var(--bd);"><td style="font-weight:700;">CHARGES</td><td></td></tr>
+                <tr><td style="padding-left:20px;">Achats & sous-traitance HT</td><td class="montant neg">${fmt(Calc.achatsHT())}</td></tr>
+                <tr><td style="padding-left:20px;">Charges fixes annuelles</td><td class="montant neg">${fmt(Calc.chargesAnnuel())}</td></tr>
+                <tr class="total-row"><td><strong>RÉSULTAT NET HT</strong></td><td class="montant ${Calc.resultatHT() >= 0 ? 'pos' : 'neg'}">${fmt(Calc.resultatHT())}</td></tr>
+              </table>
+            </div>
+            <div class="sec" style="margin-bottom:0;">
+              <h3>Indicateurs clés</h3>
+              <table class="dtb">
+                <tr><td>Marge brute</td><td class="montant ${Calc.margeB() >= 15 ? 'pos' : 'neg'}">${fmtPct(Calc.margeB())}</td></tr>
+                <tr><td>TVA collectée</td><td class="montant">${fmt(tva.coll)}</td></tr>
+                <tr><td>TVA déductible</td><td class="montant">${fmt(tva.ded)}</td></tr>
+                <tr><td>TVA nette</td><td class="montant or">${fmt(Math.max(0, tva.net))}</td></tr>
+                <tr><td>Nb chantiers 2026</td><td class="montant">${ch.length}</td></tr>
+                <tr><td>Chantiers terminés</td><td class="montant pos">${ch.filter(c => c.statut === 'termine').length}</td></tr>
+                <tr><td>Budget total projets</td><td class="montant or">${fmt(Calc.budgetChantiers())}</td></tr>
+                <tr><td>Taux conversion devis</td><td class="montant">${fmtPct(Calc.tauxConv())}</td></tr>
+                <tr><td>CA facturé TTC</td><td class="montant or">${fmt(Calc.caFacturation())}</td></tr>
+                <tr><td>CA encaissé TTC</td><td class="montant pos">${fmt(Calc.caEncaisse())}</td></tr>
+              </table>
+            </div>
+          </div>
+
+          <div class="sec">
+            <h3>Chantiers réalisés 2026</h3>
+            <table class="dtb">
+              <thead><tr><th>Réf.</th><th>Chantier</th><th>Statut</th><th>Budget HT</th><th>Avancement</th></tr></thead>
+              <tbody>${ch.map(c => `
+                <tr>
+                  <td style="font-weight:600;">${c.ref}</td>
+                  <td>${c.titre || c.ref}</td>
+                  <td><span style="font-size:10px;font-weight:700;color:${c.statut === 'termine' ? 'var(--vll)' : c.statut === 'en-cours' ? 'var(--jn)' : 'var(--af)'};">${c.statut}</span></td>
+                  <td class="montant or">${fmt(c.budget)}</td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:7px;">
+                      <div class="prog-track" style="width:70px;"><div class="prog-fill pf-or" style="width:${c.avanc}%"></div></div>
+                      ${c.avanc}%
+                    </div>
+                  </td>
+                </tr>`).join('')}
+              <tr class="total-row"><td colspan="3">TOTAL</td><td class="montant">${fmt(Calc.budgetChantiers())}</td><td></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="text-align:center;padding:16px;font-size:11px;color:var(--af);border-top:1px solid var(--bd);margin-top:8px;">
+            Bilan annuel 2026 — SARL Vilar DS · Document confidentiel · Usage interne
+          </div>`;
+      },
+
+      /* ── Helpers ── */
+      setPeriod(p, btn) {
+        document.querySelectorAll('.pb').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      },
+
+      refreshAll() {
+        const av = document.querySelector('.view.active')?.id?.replace('view-', '') || '';
+        if (av === 'overview')        this.renderOverview();
+        else if (av === 'financier')  this.renderFinancier();
+        else if (av === 'chantiers')  this.renderChantiers();
+        else if (av === 'facturation')this.renderFacturation();
+        else if (av === 'performance')this.renderPerformance();
+        else if (av === 'rapport-annuel') this.renderBilanAnnuel();
+        else this.renderOverview();
+      },
+    };
+
+    /* ════════════════════════════════════════════════════════════════
+       NAVIGATION
+    ════════════════════════════════════════════════════════════════ */
+    nav.register('overview',         () => Analytics.renderOverview());
+    nav.register('financier',        () => Analytics.renderFinancier());
+    nav.register('chantiers',        () => Analytics.renderChantiers());
+    nav.register('facturation',      () => Analytics.renderFacturation());
+    nav.register('performance',      () => Analytics.renderPerformance());
+    nav.register('rapport-mensuel',  () => { $('moisSelect') && ($('moisSelect').value = '3'); Analytics.genRapportMensuel(); });
+    nav.register('rapport-annuel',   () => Analytics.renderBilanAnnuel());
+
+    /* ════════════════════════════════════════════════════════════════
+       MONTAGE UI
+    ════════════════════════════════════════════════════════════════ */
+    VilarUI.mountModule({
+      sidebar: {
+        moduleName:    'Analytics & Rapports 2026',
+        moduleVersion: 'v2.0 — AppBus + Chart.js',
+        navItems: [
+          { type:'section', label:'Vue consolidée' },
+          { id:'overview',        icon:'⊞', label:"Vue d'ensemble" },
+          { type:'section', label:'Analyses' },
+          { id:'financier',       icon:'💰', label:'Financier' },
+          { id:'chantiers',       icon:'🏗', label:'Chantiers' },
+          { id:'facturation',     icon:'🧾', label:'Facturation' },
+          { id:'performance',     icon:'📈', label:'Performance & Benchmarks' },
+          { type:'section', label:'Rapports' },
+          { id:'rapport-mensuel', icon:'📄', label:'Rapport mensuel' },
+          { id:'rapport-annuel',  icon:'📊', label:'Bilan annuel' },
+        ],
+        dataActions: [
+          { label:'🔄 Synchroniser', onClick:'syncAllData()' },
+          { label:'🖨 Imprimer',     onClick:'window.print()' },
+        ],
+      },
+      header: {
+        title: 'Analytics & Rapports',
+        year:  '2026',
+        actions: [
+          { label:'🔄 Sync', class:'sec', onClick:'syncAllData()' },
+        ],
+        avatar: 'JV',
+      },
+      bannerModuleName: 'Analytics',
+    });
+
+    // Exposer syncAllData pour les onclick HTML
+    window.syncAllData = syncAllData;
+    window.Analytics   = Analytics;
+
+    /* ════════════════════════════════════════════════════════════════
+       INITIALISATION
+    ════════════════════════════════════════════════════════════════ */
+    async function initApp() {
+      safeIcons();
+      await syncAllData();
+      pwa.register();
+
+      // Ctrl+R → sync
+      document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+          e.preventDefault();
+          syncAllData();
+        }
+      });
+
+      // Animations KPI
+      setTimeout(() => {
+        document.querySelectorAll('.kpi').forEach((el, i) => {
+          el.style.opacity   = '0';
+          el.style.transform = 'translateY(9px)';
+          setTimeout(() => {
+            el.style.transition = 'all .28s ease';
+            el.style.opacity    = '1';
+            el.style.transform  = 'translateY(0)';
+          }, i * 42 + 60);
+        });
+      }, 80);
+
+      console.log('%c📊 VilarDS Analytics v2.0 — AppBus + Chart.js', 'color:#C8A84B;font-size:12px;font-weight:bold;');
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+      initApp();
+    }
+
+  })();
+  </script>
+</body>
+</html>

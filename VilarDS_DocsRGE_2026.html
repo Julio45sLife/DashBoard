@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1C2B3A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Vilar DS Docs">
+  <title>Vilar DS — Documents & RGE 2026</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+
+  <!-- Core Vilar DS v2.0 -->
+  <script src="vilar-core.js"></script>
+  <script src="ui-components.js"></script>
+
+  <!-- CSS spécifique Documents & RGE -->
+  <style>
+    /* ── Grille de documents ── */
+    .dgrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+      gap: 13px;
+    }
+
+    /* ── Carte document ── */
+    .dcard {
+      background: var(--bg); border: 1px solid var(--bd);
+      border-radius: var(--radius); overflow: hidden;
+      cursor: pointer; transition: var(--trans);
+    }
+    .dcard:hover {
+      transform: translateY(-2px);
+      border-color: rgba(200,168,75,.28);
+      box-shadow: var(--shadow-lg);
+    }
+    .dcard-top  { height: 3px; }
+    .dcard-body { padding: 14px 15px 10px; }
+    .dcard-cat  { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 5px; }
+    .dcard-titre{ font-family: 'Syne', sans-serif; font-size: 13.5px; font-weight: 800; margin-bottom: 8px; line-height: 1.3; }
+    .dcard-meta { font-size: 11px; color: var(--af); display: flex; flex-direction: column; gap: 3px; }
+    .dcard-foot {
+      padding: 9px 15px; border-top: 1px solid var(--bd);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    /* ── Couleurs par catégorie ── */
+    .dcard-top.rge           { background: var(--vll); }
+    .dcard-top.assurance     { background: var(--bc);  }
+    .dcard-top.legal         { background: var(--or);  }
+    .dcard-top.technique     { background: var(--jn);  }
+    .dcard-top.securite      { background: var(--rll); }
+    .dcard-top.administratif { background: var(--ojl); }
+
+    .dcard-cat.rge           { color: var(--vll); }
+    .dcard-cat.assurance     { color: var(--bc);  }
+    .dcard-cat.legal         { color: var(--or);  }
+    .dcard-cat.technique     { color: var(--jn);  }
+    .dcard-cat.securite      { color: var(--rll); }
+    .dcard-cat.administratif { color: var(--ojl); }
+
+    /* ── Badges d'expiration ── */
+    .exp-badge {
+      font-size: 9.5px; font-weight: 700;
+      padding: 2px 8px; border-radius: 9px;
+      display: inline-block;
+    }
+    .exp-ok   { background: rgba(74,222,128,.12); color: var(--vll); border: 1px solid rgba(74,222,128,.2);  }
+    .exp-warn { background: rgba(234,179,8,.12);  color: var(--jn);  border: 1px solid rgba(234,179,8,.2);   }
+    .exp-late { background: rgba(248,113,113,.12);color: var(--rll); border: 1px solid rgba(248,113,113,.2); }
+    .exp-na   { background: rgba(122,143,166,.1); color: var(--af);  border: 1px solid rgba(122,143,166,.2); }
+
+    /* ── Barre de validité RGE ── */
+    .exp-track { height: 6px; background: rgba(255,255,255,.07); border-radius: 3px; overflow: hidden; }
+    .exp-fill  { height: 100%; border-radius: 3px; transition: width .7s ease; }
+    .exp-green { background: linear-gradient(90deg, #1A6B3A, var(--vll)); }
+    .exp-yellow{ background: linear-gradient(90deg, var(--jn), var(--ojl)); }
+    .exp-red   { background: rgba(248,113,113,.5); }
+
+    /* ── Alert cards ── */
+    .alert-doc {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px 14px;
+      background: var(--bg); border: 1px solid var(--bd);
+      border-radius: 9px; margin-bottom: 9px;
+      cursor: pointer; transition: var(--trans);
+    }
+    .alert-doc:hover { border-color: rgba(200,168,75,.2); }
+    .alert-doc.urgent { border-left: 3px solid var(--rll); }
+    .alert-doc.warn   { border-left: 3px solid var(--jn);  }
+
+    /* ── Filtre bar (vue Tous) ── */
+    .fbar {
+      padding: 6px 11px; border-radius: 7px; font-size: 11px;
+      cursor: pointer; border: 1px solid var(--bd);
+      color: var(--af); background: transparent;
+      transition: var(--trans); font-family: 'DM Sans', sans-serif;
+    }
+    .fbar:hover  { color: var(--ac); }
+    .fbar.active { background: var(--ba); color: white; border-color: transparent; }
+
+    /* ── Zone upload ── */
+    .upload-zone {
+      border: 2px dashed var(--bd); border-radius: 9px;
+      padding: 20px; text-align: center; cursor: pointer;
+      transition: var(--trans);
+    }
+    .upload-zone:hover { border-color: var(--bc); background: rgba(74,123,168,.05); }
+    .upload-zone input { display: none; }
+
+    /* ── Viewer scan ── */
+    #docViewer {
+      position: fixed; inset: 0; background: rgba(0,0,0,.93);
+      z-index: 300; display: none;
+      align-items: center; justify-content: center;
+    }
+    #docViewer.open { display: flex; }
+    #dvImg  { max-width: 95vw; max-height: 90vh; border-radius: 8px; }
+    .dv-close {
+      position: absolute; top: 16px; right: 20px;
+      color: white; font-size: 28px; cursor: pointer;
+      background: rgba(0,0,0,.4); border-radius: 50%;
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* ── Formulaire modal ── */
+    .val-msg  { font-size: 10px; color: var(--rll); margin-top: 2px; display: none; }
+    .has-err .val-msg { display: block; }
+    .has-err .fi      { border-color: rgba(248,113,113,.5); }
+
+    @media (max-width: 768px) {
+      .dgrid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Mount points UI ── -->
+  <div id="sb-mount"></div>
+  <div id="hdr-mount"></div>
+  <div id="banner-mount"></div>
+  <div id="modal-mount"></div>
+
+  <!-- ── Viewer scan plein écran ── -->
+  <div id="docViewer" onclick="this.classList.remove('open')">
+    <div class="dv-close" onclick="event.stopPropagation();document.getElementById('docViewer').classList.remove('open')">✕</div>
+    <img id="dvImg" src="" alt="Scan document">
+  </div>
+
+  <!-- ── Fichier import caché ── -->
+  <input type="file" id="importFile" accept=".json" style="display:none" onchange="App.handleImport(this)">
+
+  <!-- ── Main ── -->
+  <main id="main">
+
+    <!-- DASHBOARD -->
+    <div class="view active" id="view-dashboard">
+      <div style="margin-bottom:16px;">
+        <h1 style="font-family:'Syne',sans-serif;font-size:21px;font-weight:800;">
+          Documents & RGE <span style="color:var(--or);">2026</span>
+        </h1>
+        <p style="color:var(--af);font-size:12px;margin-top:2px;">Gestion documentaire réglementaire — SARL Vilar DS</p>
+      </div>
+      <div class="kg" id="dashKpis"></div>
+      <div class="dual">
+        <div class="sec" style="margin-bottom:0;">
+          <div class="sec-header"><h3>⚠ Alertes expiration</h3></div>
+          <div id="dashAlertes"></div>
+        </div>
+        <div class="sec" style="margin-bottom:0;">
+          <div class="sec-header"><h3>📁 Par catégorie</h3></div>
+          <div id="dashCats"></div>
+        </div>
+      </div>
+      <div class="sec" style="margin-top:13px;">
+        <div class="sec-header">
+          <h3>🌿 Certifications RGE — Tableau de validité</h3>
+          <button class="bo" style="font-size:11px;padding:5px 10px;" onclick="App.openModal('rge')">+ Ajouter RGE</button>
+        </div>
+        <div id="dashRGE"></div>
+      </div>
+    </div>
+
+    <!-- ALERTES -->
+    <div class="view" id="view-alertes">
+      <div class="sh">
+        <div class="st">🔔 Alertes Expiration</div>
+      </div>
+      <div class="sec"><div id="alertesContent"></div></div>
+    </div>
+
+    <!-- CATÉGORIES (vues génériques) -->
+    <div class="view" id="view-rge">
+      <div class="sh">
+        <div class="st">🌿 RGE & Certifications</div>
+        <button class="bo" onclick="App.openModal('rge')">+ Nouveau</button>
+      </div>
+      <div class="dgrid" id="rgeGrid"></div>
+    </div>
+
+    <div class="view" id="view-assurance">
+      <div class="sh">
+        <div class="st">🛡 Assurances</div>
+        <button class="bo" onclick="App.openModal('assurance')">+ Nouveau</button>
+      </div>
+      <div class="dgrid" id="assuranceGrid"></div>
+    </div>
+
+    <div class="view" id="view-legal">
+      <div class="sh">
+        <div class="st">📋 Légal</div>
+        <button class="bo" onclick="App.openModal('legal')">+ Nouveau</button>
+      </div>
+      <div class="dgrid" id="legalGrid"></div>
+    </div>
+
+    <div class="view" id="view-technique">
+      <div class="sh">
+        <div class="st">🔧 Technique</div>
+        <button class="bo" onclick="App.openModal('technique')">+ Nouveau</button>
+      </div>
+      <div class="dgrid" id="techniqueGrid"></div>
+    </div>
+
+    <div class="view" id="view-securite">
+      <div class="sh">
+        <div class="st">⛑ Sécurité</div>
+        <button class="bo" onclick="App.openModal('securite')">+ Nouveau</button>
+      </div>
+      <div class="dgrid" id="securiteGrid"></div>
+    </div>
+
+    <div class="view" id="view-administratif">
+      <div class="sh">
+        <div class="st">🗂 Administratif</div>
+        <button class="bo" onclick="App.openModal('administratif')">+ Nouveau</button>
+      </div>
+      <div class="dgrid" id="administratifGrid"></div>
+    </div>
+
+    <!-- TOUS -->
+    <div class="view" id="view-tous">
+      <div class="sh">
+        <div class="st">📂 Tous les documents</div>
+        <button class="bo" onclick="App.openModal('rge')">+ Nouveau</button>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:13px;" id="fbarTous"></div>
+      <div class="dgrid" id="tousGrid"></div>
+    </div>
+
+    <!-- DÉTAIL -->
+    <div class="view" id="view-detail">
+      <div class="back" onclick="VilarCore.nav.back()">← Retour</div>
+      <div id="detailContent"></div>
+    </div>
+
+  </main>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       LOGIQUE MÉTIER — Documents & RGE
+       IIFE : zéro variable globale, compatible Safari iOS strict
+  ════════════════════════════════════════════════════════════════ -->
+  <script>
+  (function () {
+    'use strict';
+
+    /* ── Raccourcis core ── */
+    const { db, bus, persistence, toast, modal, nav, io, render, utils,
+            MOIS, TODAY } = VilarCore;
+    const UI  = VilarUI;
+    const $   = utils.$;
+    const fmtD = utils.fmtD;
+
+    /* ════════════════════════════════════════════════════════════════
+       CONFIGURATION
+    ════════════════════════════════════════════════════════════════ */
+    const MODULE_KEY  = 'docs';
+    const LEGACY_DB   = 'VilarDS_Docs_DB';
+    const LEGACY_STORE = 'docsdata';
+    const LEGACY_KEY   = 'docs';
+
+    /** Catégories de documents */
+    const CATS = {
+      rge:           { label: 'RGE & Certifications',  ico: '🌿' },
+      assurance:     { label: 'Assurances',             ico: '🛡' },
+      legal:         { label: 'Légal',                  ico: '📋' },
+      technique:     { label: 'Technique',              ico: '🔧' },
+      securite:      { label: 'Sécurité',               ico: '⛑' },
+      administratif: { label: 'Administratif',          ico: '🗂' },
+    };
+
+    /* ════════════════════════════════════════════════════════════════
+       DONNÉES PAR DÉFAUT
+    ════════════════════════════════════════════════════════════════ */
+    const DEFAULT_DOCS = [
+      { id:1,  nom:'Certification RGE QualiSol',        cat:'rge',           soustype:'QualiSol',                  ref:'QS-2024-12345',      organisme:'Qualibat',            emission:'2024-01-15', expiration:'2026-01-15', rappel:60,  notes:"Certification solaire thermique. Renouvellement tous les 4 ans.",      scan:null },
+      { id:2,  nom:'Certification RGE Qualibat 7141',   cat:'rge',           soustype:'Qualibat',                  ref:'QB-7141-98765',      organisme:'Qualibat',            emission:'2024-03-01', expiration:'2026-03-01', rappel:90,  notes:"Isolation thermique par l'extérieur. Obligatoire pour travaux CEE.", scan:null },
+      { id:3,  nom:'Assurance RC Pro & Décennale',      cat:'assurance',     soustype:'RC Professionnelle + Décennale', ref:'POL-2024-AXA-789', organisme:'AXA Pro',          emission:'2024-01-01', expiration:'2024-12-31', rappel:60,  notes:"Police annuelle. Renouvellement automatique sauf résiliation. Couverture : 500k€.", scan:null },
+      { id:4,  nom:'Assurance Flotte Véhicules',        cat:'assurance',     soustype:'Flotte auto',               ref:'AXA-FLEET-456',      organisme:'AXA Pro',            emission:'2024-01-01', expiration:'2024-12-31', rappel:30,  notes:"Ford Transit + véhicule léger. Tous risques.",                          scan:null },
+      { id:5,  nom:'KBIS SARL Vilar DS',                cat:'legal',         soustype:'Extrait KBIS',              ref:'KBIS-495126344',     organisme:'Greffe TC Orléans',  emission:'2024-02-01', expiration:null,         rappel:null, notes:"Extrait valable 3 mois pour certaines démarches.",                     scan:null },
+      { id:6,  nom:'Statuts SARL Vilar DS',             cat:'legal',         soustype:'Statuts société',           ref:'SIREN-495126344',    organisme:'Infogreffe',         emission:'2018-06-15', expiration:null,         rappel:null, notes:"Statuts fondateurs. Dernière mise à jour : 2022.",                      scan:null },
+      { id:7,  nom:'Attestation Fiscale & Sociale',     cat:'legal',         soustype:'Attestation de régularité', ref:'ATT-FISC-2024',      organisme:'URSSAF + DGFiP',     emission:'2024-01-10', expiration:'2024-07-10', rappel:30,  notes:"À renouveler tous les 6 mois pour les marchés publics.",                scan:null },
+      { id:8,  nom:'DUERP — Document Unique',           cat:'securite',      soustype:'DUERP',                     ref:'DUERP-VDS-2024',     organisme:'Vilar DS',           emission:'2024-01-01', expiration:null,         rappel:null, notes:"Document Unique Évaluation Risques Professionnels. À mettre à jour chaque année.", scan:null },
+      { id:9,  nom:'Plan de Prévention Chantiers',      cat:'securite',      soustype:'Plan prévention',           ref:'PP-VDS-2024',        organisme:'Vilar DS',           emission:'2024-01-01', expiration:null,         rappel:null, notes:"Procédures sécurité chantier. Port EPI obligatoire.",                   scan:null },
+      { id:10, nom:'Habilitations électriques BS/B1',   cat:'technique',     soustype:'Habilitation électrique',   ref:'ELEC-BS-2024-001',  organisme:'AFPA Orléans',       emission:'2024-03-15', expiration:'2027-03-15', rappel:90,  notes:"Habilitations électriques Julio Vilar. Valables 3 ans.",                scan:null },
+      { id:11, nom:'Carte BTP Professionnelle',         cat:'administratif', soustype:'Carte BTP',                 ref:'BTP-45-12345-JV',   organisme:'CIBTP Centre-Val',   emission:'2024-01-01', expiration:'2024-12-31', rappel:30,  notes:"Carte professionnelle BTP Julio Vilar. Renouvellement annuel.",         scan:null },
+      { id:12, nom:'Adhésion FFB Loiret',               cat:'administratif', soustype:'Cotisation syndicale',      ref:'FFB-45-2024-VDS',   organisme:'FFB Centre-Val',     emission:'2024-01-15', expiration:'2024-12-31', rappel:60,  notes:"Fédération Française du Bâtiment. Accès formations et veille réglementaire.", scan:null },
+    ];
+
+    /* ════════════════════════════════════════════════════════════════
+       STATE — mutable, isolé dans l'IIFE
+    ════════════════════════════════════════════════════════════════ */
+    let docs   = DEFAULT_DOCS.map(d => ({ ...d }));
+    let nextId = 100;
+
+    // État modal
+    let _editId       = null;
+    let _modalScanData = null;
+
+    /* ════════════════════════════════════════════════════════════════
+       PERSISTANCE — save / load / bus
+    ════════════════════════════════════════════════════════════════ */
+    const App = {
+      /** Données à sauvegarder */
+      getData() {
+        return { docs, nextId };
+      },
+
+      /** Applique les données chargées depuis IndexedDB */
+      applyData(saved) {
+        if (saved.docs)   docs   = saved.docs;
+        if (saved.nextId) nextId = saved.nextId;
+      },
+
+      /** Snapshot publié sur l'AppBus (lu par Analytics, Dashboard) */
+      getSnapshot() {
+        const alerts = Render.computeAlerts();
+        return {
+          totalDocs:    docs.length,
+          rgeCount:     docs.filter(d => d.cat === 'rge').length,
+          expiringSoon: alerts.filter(a => a.type === 'urgent').length,
+          alertsCount:  alerts.length,
+        };
+      },
+
+      /** Validation à l'import JSON */
+      validateImport(data) {
+        return data && Array.isArray(data.docs);
+      },
+
+      /** Gère l'import depuis l'input file caché */
+      handleImport(input) {
+        const file = input.files[0];
+        if (!file) return;
+        io.triggerImport(
+          (data) => {
+            this.applyData(data);
+            persistence.mark();
+            Render.refreshAll();
+          },
+          this.validateImport,
+        );
+        input.value = '';
+      },
+
+      openModal(cat) { Render.openModal(cat); },
+    };
+
+    /* ════════════════════════════════════════════════════════════════
+       HELPERS MÉTIER
+    ════════════════════════════════════════════════════════════════ */
+
+    /** Calcule le statut d'expiration d'un document */
+    function expStatus(d) {
+      if (!d.expiration) return { cls: 'exp-na', label: 'Sans expiration' };
+      const j = utils.daysUntil(d.expiration);
+      if (j < 0)    return { cls: 'exp-late', label: `Expiré (${Math.abs(j)}j)` };
+      if (j <= 14)  return { cls: 'exp-late', label: `Expire dans ${j}j` };
+      if (j <= 60)  return { cls: 'exp-warn', label: `Expire dans ${j}j` };
+      return { cls: 'exp-ok', label: `Valide (${j}j)` };
+    }
+
+    /** Calcule toutes les alertes d'expiration */
+    function computeAlerts() {
+      const al = [];
+      docs.forEach(d => {
+        if (!d.expiration) return;
+        const j      = utils.daysUntil(d.expiration);
+        const rappel = d.rappel || 60;
+        const catIco = CATS[d.cat]?.ico || '';
+        if (j < 0) {
+          al.push({
+            type: 'urgent', ico: '🔴',
+            titre: `EXPIRÉ — ${d.nom}`,
+            sub: `${catIco} ${d.organisme || '—'} · Expiré depuis ${Math.abs(j)} jours`,
+            date: fmtD(d.expiration), id: d.id,
+          });
+        } else if (j <= rappel) {
+          al.push({
+            type: j <= 14 ? 'urgent' : 'warn',
+            ico:  j <= 14 ? '⚠' : '🟡',
+            titre: `Expiration proche — ${d.nom}`,
+            sub: `${catIco} ${d.organisme || '—'} · Dans ${j} jours`,
+            date: `Expire le ${fmtD(d.expiration)}`, id: d.id,
+          });
+        }
+      });
+      return al.sort((a, b) => (a.type === 'urgent' && b.type !== 'urgent') ? -1 : 1);
+    }
+
+    /** Compresse une image via Canvas (max 1200px, JPEG 78%) */
+    function compressImage(file, callback) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX = 1200;
+          let w = img.width, h = img.height;
+          if (w > MAX || h > MAX) {
+            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+            else       { w = Math.round(w * MAX / h); h = MAX; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          callback(canvas.toDataURL('image/jpeg', 0.78));
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       RENDER — Templates HTML
+    ════════════════════════════════════════════════════════════════ */
+    const Render = {
+      computeAlerts,
+
+      /* ── Dashboard ── */
+      dashboard() {
+        const al      = computeAlerts();
+        const rge     = docs.filter(d => d.cat === 'rge');
+        const totalExp = docs.filter(d => d.expiration).length;
+        const expired  = al.filter(a => a.type === 'urgent').length;
+
+        // KPIs
+        $('dashKpis').innerHTML = [
+          { l:'Total documents',      v: docs.length,           s:'Tous types confondus',  c:'cb'                          },
+          { l:'RGE & Certifs',        v: rge.length,            s:'Certifications actives', c:'cv'                         },
+          { l:'Expirations urgentes', v: expired,               s:'Expirés ou < 14 jours', c: expired > 0 ? 'cr' : 'cv'   },
+          { l:'Alertes actives',      v: al.length,             s:'Rappels déclenchés',    c: al.length > 0 ? 'cj' : 'cv' },
+          { l:'Avec expiration',      v: totalExp,              s:'Documents datés',        c:'col'                        },
+          { l:'Sans expiration',      v: docs.length - totalExp,s:'Permanents',             c:'co'                         },
+        ].map(k => `
+          <div class="kpi ${k.c}">
+            <div class="kl">${k.l}</div>
+            <div class="kv">${k.v}</div>
+            <div class="ks">${k.s}</div>
+          </div>`).join('');
+
+        // Alertes mini
+        $('dashAlertes').innerHTML = al.length === 0
+          ? '<div class="empty empty-ok">✓ Aucune alerte</div>'
+          : al.slice(0, 5).map(a => `
+              <div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer;font-size:12px;" onclick="VilarCore.nav.go('alertes')">
+                <span style="font-size:16px;">${a.ico}</span>
+                <div>
+                  <div style="font-weight:600;">${a.titre.split('—')[0].trim()}</div>
+                  <div style="font-size:10.5px;color:var(--af);">${a.sub}</div>
+                </div>
+              </div>`).join('')
+            + (al.length > 5 ? `<div style="font-size:11px;color:var(--bc);margin-top:7px;cursor:pointer;" onclick="VilarCore.nav.go('alertes')">Voir toutes (${al.length}) →</div>` : '');
+
+        // Par catégorie
+        $('dashCats').innerHTML = Object.entries(CATS).map(([k, v]) => {
+          const n        = docs.filter(d => d.cat === k).length;
+          const expN     = docs.filter(d => d.cat === k && d.expiration && utils.daysUntil(d.expiration) <= 60 && utils.daysUntil(d.expiration) >= 0).length;
+          const expiredN = docs.filter(d => d.cat === k && d.expiration && utils.daysUntil(d.expiration) < 0).length;
+          return `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer;" onclick="VilarCore.nav.go('${k}')">
+              <div style="font-size:12.5px;font-weight:500;">${v.ico} ${v.label}</div>
+              <div style="display:flex;align-items:center;gap:7px;">
+                ${expiredN > 0 ? `<span class="exp-badge exp-late">${expiredN} expiré${expiredN > 1 ? 's' : ''}</span>` : ''}
+                ${expN     > 0 ? `<span class="exp-badge exp-warn">${expN} bientôt</span>` : ''}
+                <span style="font-family:'Syne',sans-serif;font-weight:800;color:var(--or);">${n}</span>
+              </div>
+            </div>`;
+        }).join('');
+
+        // RGE dashboard
+        const rges = docs.filter(d => d.cat === 'rge');
+        $('dashRGE').innerHTML = rges.length === 0
+          ? `<div class="empty">Aucune certification RGE. <span style="color:var(--bc);cursor:pointer;" onclick="App.openModal('rge')">+ Ajouter</span></div>`
+          : rges.map(d => {
+              const st  = expStatus(d);
+              const j   = d.expiration ? utils.daysUntil(d.expiration) : null;
+              const pct = j !== null && j > 0 ? Math.min(100, Math.round(j / 365 * 100)) : j === null ? 100 : 0;
+              const cls = pct > 50 ? 'exp-green' : pct > 20 ? 'exp-yellow' : 'exp-red';
+              return `
+                <div style="margin-bottom:14px;cursor:pointer;" onclick="Render.openDetail(${d.id})">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                    <div>
+                      <span style="font-size:13px;font-weight:600;">${d.nom}</span>
+                      <span style="font-size:10px;color:var(--af);"> · ${d.ref || '—'}</span>
+                    </div>
+                    <span class="exp-badge ${st.cls}">${st.label}</span>
+                  </div>
+                  <div class="exp-track"><div class="exp-fill ${cls}" style="width:${pct}%"></div></div>
+                  <div style="font-size:10.5px;color:var(--af);margin-top:3px;">
+                    Organisme : ${d.organisme || '—'} · Émis : ${fmtD(d.emission)} · Expire : ${fmtD(d.expiration)}
+                  </div>
+                </div>`;
+            }).join('');
+
+        // Mise à jour pills sidebar
+        $('alertPill').textContent    = al.length;
+        $('rgePill').textContent      = rge.length;
+        $('assurancePill').textContent = docs.filter(d => d.cat === 'assurance').length;
+      },
+
+      /* ── Vue alertes ── */
+      alertes() {
+        const al = computeAlerts();
+        $('alertesContent').innerHTML = al.length === 0
+          ? '<div class="empty empty-ok" style="font-size:14px;padding:40px 0;">✅ Aucune alerte — tous vos documents sont à jour !</div>'
+          : `<div style="font-size:12px;color:var(--af);margin-bottom:12px;">
+               ${al.length} alerte${al.length > 1 ? 's' : ''} —
+               <strong style="color:var(--rll);">${al.filter(a => a.type === 'urgent').length} urgente${al.filter(a => a.type === 'urgent').length > 1 ? 's' : ''}</strong>
+             </div>`
+            + al.map(a => `
+              <div class="alert-doc ${a.type}" onclick="Render.openDetail(${a.id})" role="button">
+                <div style="font-size:20px;">${a.ico}</div>
+                <div style="flex:1;">
+                  <div style="font-size:12.5px;font-weight:600;margin-bottom:2px;">${a.titre}</div>
+                  <div style="font-size:11px;color:var(--af);">${a.sub}</div>
+                  <div style="font-size:10.5px;color:var(--af);margin-top:3px;">${a.date}</div>
+                </div>
+                <span class="exp-badge ${a.type === 'urgent' ? 'exp-late' : 'exp-warn'}">
+                  ${a.type === 'urgent' ? 'URGENT' : 'ATTENTION'}
+                </span>
+              </div>`).join('');
+      },
+
+      /* ── Carte document ── */
+      docCard(d) {
+        const st      = expStatus(d);
+        const catInfo = CATS[d.cat] || { label: d.cat, ico: '📄' };
+        return `
+          <div class="dcard" onclick="Render.openDetail(${d.id})">
+            <div class="dcard-top ${d.cat}"></div>
+            <div class="dcard-body">
+              <div class="dcard-cat ${d.cat}">${catInfo.ico} ${catInfo.label}</div>
+              <div class="dcard-titre">${utils.esc(d.nom)}</div>
+              <div class="dcard-meta">
+                <span>🏢 ${utils.esc(d.organisme || '—')}</span>
+                <span>🔖 ${utils.esc(d.ref || '—')}</span>
+                <span>📅 Émis : ${fmtD(d.emission)}</span>
+                ${d.expiration
+                  ? `<span>🏁 Expire : ${fmtD(d.expiration)}</span>`
+                  : '<span style="color:var(--af);">🔄 Sans expiration</span>'}
+                ${d.scan ? '<span style="color:var(--bc);">📎 Scan disponible</span>' : ''}
+              </div>
+            </div>
+            <div class="dcard-foot">
+              <span class="exp-badge ${st.cls}">${st.label}</span>
+              <div style="display:flex;gap:5px;" onclick="event.stopPropagation()">
+                <button class="bg2" onclick="Render.editDoc(${d.id})">✎</button>
+                <button class="bd2" onclick="Render.deleteDoc(${d.id})">🗑</button>
+              </div>
+            </div>
+          </div>`;
+      },
+
+      /* ── Grille par catégorie ── */
+      grid(cat, gridId) {
+        const el   = $(gridId);
+        if (!el) return;
+        const list = docs.filter(d => d.cat === cat);
+        el.innerHTML = list.length === 0
+          ? `<div class="empty">Aucun document dans cette catégorie. <span style="color:var(--bc);cursor:pointer;" onclick="App.openModal('${cat}')">+ Ajouter</span></div>`
+          : list.map(d => this.docCard(d)).join('');
+      },
+
+      /* ── Vue Tous ── */
+      tous(filter = 'tous') {
+        const el   = $('tousGrid');
+        if (!el) return;
+        const list = filter === 'tous' ? docs : docs.filter(d => d.cat === filter);
+        el.innerHTML = list.length === 0
+          ? '<div class="empty">Aucun document.</div>'
+          : list.map(d => this.docCard(d)).join('');
+
+        // Barre de filtres
+        const fb = $('fbarTous');
+        if (fb) {
+          fb.innerHTML = [
+            { k: 'tous', v: { ico: '📂', label: 'Tous' } },
+            ...Object.entries(CATS).map(([k, v]) => ({ k, v })),
+          ].map(({ k, v }) => `
+            <button class="fbar ${filter === k ? 'active' : ''}" onclick="Render.tous('${k}')">
+              ${v.ico} ${v.label}
+            </button>`).join('');
+        }
+      },
+
+      /* ── Détail document ── */
+      openDetail(id) {
+        const d = docs.find(x => x.id === id);
+        if (!d) return;
+
+        const st      = expStatus(d);
+        const catInfo = CATS[d.cat] || { label: d.cat, ico: '📄' };
+        const j       = d.expiration ? utils.daysUntil(d.expiration) : null;
+        const pct     = j !== null && j > 0 ? Math.min(100, Math.round(j / 365 * 100)) : j === null ? 100 : 0;
+        const pcls    = pct > 50 ? 'exp-green' : pct > 20 ? 'exp-yellow' : 'exp-red';
+        const expColor = st.cls === 'exp-late' ? 'var(--rll)' : st.cls === 'exp-warn' ? 'var(--jn)' : 'var(--vll)';
+
+        $('detailContent').innerHTML = `
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+            <div>
+              <div style="font-size:9.5px;color:var(--af);text-transform:uppercase;letter-spacing:1px;">${catInfo.ico} ${catInfo.label}</div>
+              <h1 style="font-family:'Syne',sans-serif;font-size:19px;font-weight:800;margin-top:3px;">${utils.esc(d.nom)}</h1>
+              <div style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap;">
+                <span class="exp-badge ${st.cls}">${st.label}</span>
+                ${d.scan ? '<span style="background:rgba(74,123,168,.15);color:var(--bc);padding:3px 8px;border-radius:18px;font-size:9.5px;font-weight:700;border:1px solid rgba(74,123,168,.2);">📎 Scan</span>' : ''}
+              </div>
+            </div>
+            <div style="display:flex;gap:7px;">
+              <button class="bou" onclick="Render.editDoc(${d.id})">✎ Modifier</button>
+              <button class="bd2" style="padding:7px 11px;" onclick="Render.deleteDoc(${d.id})">🗑</button>
+            </div>
+          </div>
+
+          <div class="dual">
+            <div class="sec" style="margin-bottom:0;">
+              <h3>Informations document</h3>
+              <table class="dtb">
+                <tr><td>Catégorie</td><td>${catInfo.ico} ${catInfo.label}</td></tr>
+                <tr><td>Sous-type</td><td>${utils.esc(d.soustype || '—')}</td></tr>
+                <tr><td>Référence</td><td style="font-weight:600;">${utils.esc(d.ref || '—')}</td></tr>
+                <tr><td>Organisme</td><td>${utils.esc(d.organisme || '—')}</td></tr>
+                <tr><td>Date d'émission</td><td>${fmtD(d.emission)}</td></tr>
+                <tr><td>Date d'expiration</td><td style="font-weight:600;color:${expColor};">${fmtD(d.expiration)}</td></tr>
+                <tr><td>Rappel</td><td>${d.rappel ? d.rappel + ' jours avant' : '—'}</td></tr>
+              </table>
+            </div>
+            <div class="sec" style="margin-bottom:0;">
+              <h3>Validité</h3>
+              ${d.expiration ? `
+                <div style="font-size:28px;font-weight:800;font-family:'Syne',sans-serif;color:${expColor};">
+                  ${j !== null ? (j < 0 ? Math.abs(j) + ' j dépassés' : j + ' jours restants') : '—'}
+                </div>
+                <div class="exp-track" style="margin-top:10px;margin-bottom:6px;height:8px;">
+                  <div class="exp-fill ${pcls}" style="width:${pct}%"></div>
+                </div>
+                <div style="font-size:11px;color:var(--af);">Expire le ${fmtD(d.expiration)}</div>
+              ` : '<div style="font-size:13px;color:var(--vll);margin-top:10px;">✓ Document permanent (sans expiration)</div>'}
+              ${d.rappel ? `<div style="margin-top:12px;font-size:11.5px;color:var(--af);">Rappel : <strong style="color:var(--or);">${d.rappel} jours avant expiration</strong></div>` : ''}
+            </div>
+          </div>
+
+          ${d.notes ? `
+            <div class="sec">
+              <h3>Notes</h3>
+              <p style="font-size:13px;line-height:1.7;color:var(--am);">${utils.esc(d.notes)}</p>
+            </div>` : ''}
+
+          <div class="sec">
+            <h3>Scan du document</h3>
+            ${d.scan ? `
+              <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+                <img src="${d.scan}" style="max-width:280px;max-height:200px;border-radius:8px;border:1px solid var(--bd);cursor:pointer;object-fit:contain;"
+                     onclick="document.getElementById('dvImg').src='${d.scan}';document.getElementById('docViewer').classList.add('open')">
+                <div>
+                  <p style="font-size:12px;color:var(--af);margin-bottom:10px;">Cliquez sur l'image pour l'agrandir.</p>
+                  <button class="bd2" onclick="Render.removeScan(${d.id})" style="font-size:11px;">✕ Supprimer le scan</button>
+                </div>
+              </div>
+            ` : `
+              <div class="upload-zone" onclick="document.getElementById('scanInput-${d.id}').click()">
+                <input type="file" id="scanInput-${d.id}" accept="image/*"
+                       onchange="Render.handleScanUpload(${d.id}, this)">
+                <div style="font-size:18px;">📎</div>
+                <p style="font-size:12px;color:var(--af);margin-top:5px;">Joindre un scan ou une photo du document</p>
+              </div>`}
+          </div>`;
+
+        nav.go('detail');
+      },
+
+      /** Upload scan depuis vue détail */
+      handleScanUpload(id, input) {
+        const file = input.files[0];
+        if (!file) return;
+        compressImage(file, (dataUrl) => {
+          const d = docs.find(x => x.id === id);
+          if (d) {
+            d.scan = dataUrl;
+            persistence.mark();
+            this.openDetail(id);
+            toast.show('Scan ajouté ✓', 'ok');
+          }
+        });
+        input.value = '';
+      },
+
+      /** Supprime le scan d'un document */
+      removeScan(id) {
+        if (!confirm('Supprimer le scan ?')) return;
+        const d = docs.find(x => x.id === id);
+        if (d) {
+          d.scan = null;
+          persistence.mark();
+          this.openDetail(id);
+          toast.show('Scan supprimé', 'sv');
+        }
+      },
+
+      /** Supprime un document */
+      deleteDoc(id) {
+        const d = docs.find(x => x.id === id);
+        if (!confirm(`Supprimer "${d?.nom}" ?`)) return;
+        docs = docs.filter(x => x.id !== id);
+        persistence.mark();
+        this.refreshAll();
+        if ($('view-detail').classList.contains('active')) nav.back();
+        toast.show('Document supprimé', 'sv');
+      },
+
+      /* ── Modal — nouveau document ── */
+      openModal(defCat = 'rge') {
+        _editId        = null;
+        _modalScanData = null;
+
+        modal.open({
+          title:     'Nouveau document',
+          body:      this._buildModalBody(defCat, null),
+          saveLabel: '💾 Enregistrer',
+          onSave:    () => this.saveDoc(),
+        });
+      },
+
+      /* ── Modal — modifier un document ── */
+      editDoc(id) {
+        const d = docs.find(x => x.id === id);
+        if (!d) return;
+        _editId        = id;
+        _modalScanData = d.scan || null;
+
+        modal.open({
+          title:     `Modifier — ${d.nom.slice(0, 30)}`,
+          body:      this._buildModalBody(d.cat, d),
+          saveLabel: '💾 Enregistrer',
+          onSave:    () => this.saveDoc(),
+        });
+      },
+
+      /** Construit le HTML du formulaire modal */
+      _buildModalBody(defCat, d) {
+        const cats = Object.entries(CATS).map(([k, v]) =>
+          `<option value="${k}" ${defCat === k ? 'selected' : ''}>${v.ico} ${v.label}</option>`
+        ).join('');
+
+        const hasScan = d?.scan || false;
+        return `
+          <div class="fg">
+            <div class="f1 full has-nom">
+              <label class="fl">Nom du document *</label>
+              <input class="fi" id="f-nom" type="text" value="${utils.esc(d?.nom || '')}"
+                     oninput="document.getElementById('fv-nom').style.display='none'"
+                     placeholder="Ex: Certification RGE QualiSol">
+              <div class="val-msg" id="fv-nom">Nom obligatoire</div>
+            </div>
+            <div class="f1">
+              <label class="fl">Catégorie</label>
+              <select class="fi" id="f-cat">${cats}</select>
+            </div>
+            <div class="f1">
+              <label class="fl">Sous-type</label>
+              <input class="fi" id="f-soustype" type="text" value="${utils.esc(d?.soustype || '')}"
+                     placeholder="Ex: QualiSol, Décennale…">
+            </div>
+            <div class="f1">
+              <label class="fl">Référence</label>
+              <input class="fi" id="f-ref" type="text" value="${utils.esc(d?.ref || '')}"
+                     placeholder="N° de certificat ou police">
+            </div>
+            <div class="f1">
+              <label class="fl">Organisme</label>
+              <input class="fi" id="f-organisme" type="text" value="${utils.esc(d?.organisme || '')}"
+                     placeholder="Qualibat, AXA Pro…">
+            </div>
+            <div class="f1">
+              <label class="fl">Date d'émission</label>
+              <input class="fi" id="f-emission" type="date" value="${d?.emission || ''}">
+            </div>
+            <div class="f1">
+              <label class="fl">Date d'expiration</label>
+              <input class="fi" id="f-expiration" type="date" value="${d?.expiration || ''}">
+            </div>
+            <div class="f1">
+              <label class="fl">Rappel (jours avant expiration)</label>
+              <select class="fi" id="f-rappel">
+                ${[14, 30, 60, 90, 180].map(v =>
+                  `<option value="${v}" ${(d?.rappel || 60) === v ? 'selected' : ''}>${v} jours</option>`
+                ).join('')}
+              </select>
+            </div>
+            <div class="f1 full">
+              <label class="fl">Notes</label>
+              <textarea class="fi-area fi" id="f-notes" rows="3">${utils.esc(d?.notes || '')}</textarea>
+            </div>
+            <div class="f1 full">
+              <label class="fl">Scan / Photo</label>
+              <div class="upload-zone" onclick="document.getElementById('f-scan').click()" style="padding:12px;">
+                <input type="file" id="f-scan" accept="image/*" onchange="Render._handleModalScan(this)">
+                <div style="font-size:16px;">📎</div>
+                <p id="uploadLabel" style="font-size:12px;color:var(--af);margin-top:4px;">
+                  ${hasScan ? '✓ Scan attaché (cliquez pour remplacer)' : 'Cliquez pour joindre un scan ou une photo'}
+                </p>
+              </div>
+            </div>
+          </div>`;
+      },
+
+      /** Gère l'upload de scan depuis le modal */
+      _handleModalScan(input) {
+        const file = input.files[0];
+        if (!file) return;
+        compressImage(file, (dataUrl) => {
+          _modalScanData = dataUrl;
+          $('uploadLabel').textContent = '✓ Scan prêt à enregistrer';
+          toast.show('Scan chargé ✓', 'ok');
+        });
+        input.value = '';
+      },
+
+      /** Valide et enregistre le document depuis le modal */
+      saveDoc() {
+        const nom = $('f-nom')?.value.trim();
+        if (!nom) {
+          const fv = $('fv-nom');
+          if (fv) fv.style.display = 'block';
+          toast.show('Nom obligatoire', 'err');
+          return;
+        }
+        const emission    = $('f-emission')?.value;
+        const expiration  = $('f-expiration')?.value;
+        if (emission && expiration && new Date(expiration) < new Date(emission)) {
+          toast.show("L'expiration doit être après l'émission", 'err');
+          return;
+        }
+        const data = {
+          nom,
+          cat:       $('f-cat')?.value,
+          soustype:  $('f-soustype')?.value.trim(),
+          ref:       $('f-ref')?.value.trim(),
+          organisme: $('f-organisme')?.value.trim(),
+          emission,
+          expiration: expiration || null,
+          rappel:    parseInt($('f-rappel')?.value) || 60,
+          notes:     $('f-notes')?.value.trim(),
+          scan:      _modalScanData,
+        };
+
+        if (_editId) {
+          Object.assign(docs.find(x => x.id === _editId), data);
+          toast.show('Document mis à jour ✓', 'ok');
+        } else {
+          docs.push({ id: ++nextId, ...data });
+          toast.show('Document ajouté ✓', 'ok');
+        }
+
+        modal.close();
+        persistence.mark();
+        this.refreshAll();
+      },
+
+      /* ── Refresh global ── */
+      refreshAll() {
+        this.dashboard();
+        const av = document.querySelector('.view.active')?.id?.replace('view-', '') || '';
+        const catViews = ['rge', 'assurance', 'legal', 'technique', 'securite', 'administratif'];
+        if (catViews.includes(av)) this.grid(av, av + 'Grid');
+        if (av === 'tous')         this.tous();
+        if (av === 'alertes')      this.alertes();
+      },
+    };
+
+    /* ════════════════════════════════════════════════════════════════
+       NAVIGATION — enregistrement des vues
+    ════════════════════════════════════════════════════════════════ */
+    nav.register('dashboard',    () => Render.dashboard());
+    nav.register('alertes',      () => Render.alertes());
+    nav.register('rge',          () => Render.grid('rge',           'rgeGrid'));
+    nav.register('assurance',    () => Render.grid('assurance',     'assuranceGrid'));
+    nav.register('legal',        () => Render.grid('legal',         'legalGrid'));
+    nav.register('technique',    () => Render.grid('technique',     'techniqueGrid'));
+    nav.register('securite',     () => Render.grid('securite',      'securiteGrid'));
+    nav.register('administratif',() => Render.grid('administratif', 'administratifGrid'));
+    nav.register('tous',         () => Render.tous());
+    nav.register('detail',       () => {});
+
+    /* ════════════════════════════════════════════════════════════════
+       MONTAGE DU MODULE — VilarUI.mountModule()
+    ════════════════════════════════════════════════════════════════ */
+    VilarUI.mountModule({
+      sidebar: {
+        moduleName:    'Documents & RGE 2026',
+        moduleVersion: 'v2.0 — IndexedDB + PWA',
+        navItems: [
+          { type: 'section', label: 'Tableau de bord' },
+          { id: 'dashboard', icon: '⊞', label: "Vue d'ensemble" },
+          { id: 'alertes',   icon: '🔔', label: 'Alertes expiration', pill: 0, pillId: 'alertPill', pillClass: 'pr' },
+          { type: 'section', label: 'Catégories' },
+          { id: 'rge',           icon: '🌿', label: 'RGE & Certifications', pill: 0, pillId: 'rgePill',       pillClass: 'pv' },
+          { id: 'assurance',     icon: '🛡', label: 'Assurances',           pill: 0, pillId: 'assurancePill', pillClass: 'pb' },
+          { id: 'legal',         icon: '📋', label: 'Légal' },
+          { id: 'technique',     icon: '🔧', label: 'Technique' },
+          { id: 'securite',      icon: '⛑', label: 'Sécurité' },
+          { id: 'administratif', icon: '🗂', label: 'Administratif' },
+          { type: 'section', label: 'Tous' },
+          { id: 'tous', icon: '📂', label: 'Tous les documents' },
+        ],
+        dataActions: [
+          { label: '↓ Export JSON', onClick: "VilarCore.io.exportJSON(App.getData(), 'Docs')" },
+          { label: '↑ Importer JSON', onClick: "document.getElementById('importFile').click()" },
+          { label: '🖨 Imprimer',    onClick: 'window.print()' },
+        ],
+      },
+      header: {
+        title: 'Documents & RGE',
+        year:  '2026',
+        actions: [
+          { label: '💾',        class: 'sec', onClick: "VilarCore.persistence.save()" },
+          { label: '+ Document', onClick: "App.openModal('rge')" },
+        ],
+        avatar: 'JV',
+      },
+      bannerModuleName: 'Documents',
+    });
+
+    /* ════════════════════════════════════════════════════════════════
+       INITIALISATION
+    ════════════════════════════════════════════════════════════════ */
+    async function initApp() {
+      // ── 1. Charger les données ──────────────────────────────────
+      try {
+        let saved = await db.getModule(MODULE_KEY);
+
+        // Migration v1 → v2 : lire l'ancienne DB isolée si rien en v2
+        if (!saved) {
+          saved = await db.getExternal(LEGACY_DB, LEGACY_STORE, LEGACY_KEY);
+          if (saved) {
+            toast.show('Migration Docs v1 → v2 ✓', 'info', 3000);
+          }
+        }
+
+        if (saved) {
+          App.applyData(saved);
+          VilarCore.saveIndicator.update(false, saved.savedAt ?? null);
+          toast.show('Documents restaurés ✓', 'ok', 2000);
+        } else {
+          VilarCore.saveIndicator.update(false, null);
+        }
+      } catch (err) {
+        console.error('[DocsRGE] Chargement échoué:', err);
+        VilarCore.saveIndicator.setLoading();
+      }
+
+      // ── 2. Configurer la persistance ────────────────────────────
+      persistence.init(
+        // saveFn
+        async () => {
+          const payload = { ...App.getData(), savedAt: new Date().toISOString(), _version: '2.0' };
+          await db.setModule(MODULE_KEY, payload);
+          // Publier snapshot inter-modules
+          await bus.publish(MODULE_KEY, App.getSnapshot());
+        },
+        // onDirty
+        (isDirty, lastSaved) => VilarCore.saveIndicator.update(isDirty, lastSaved),
+      );
+
+      // ── 3. Premier rendu ────────────────────────────────────────
+      Render.dashboard();
+      // Activer nav dashboard
+      const navDash = document.getElementById('nav-dashboard');
+      if (navDash) navDash.classList.add('active');
+
+      // ── 4. PWA & icônes ─────────────────────────────────────────
+      VilarCore.pwa.register();
+      VilarCore.safeIcons();
+
+      // ── 5. Animations KPI ───────────────────────────────────────
+      setTimeout(() => {
+        document.querySelectorAll('.kpi').forEach((el, i) => {
+          el.style.opacity   = '0';
+          el.style.transform = 'translateY(9px)';
+          setTimeout(() => {
+            el.style.transition = 'all .28s ease';
+            el.style.opacity    = '1';
+            el.style.transform  = 'translateY(0)';
+          }, i * 42 + 60);
+        });
+      }, 80);
+
+      // ── 6. Raccourcis clavier ────────────────────────────────────
+      document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+          e.preventDefault();
+          persistence.save(false);
+        }
+        if (e.key === 'Escape') {
+          modal.close();
+          document.getElementById('docViewer')?.classList.remove('open');
+        }
+      });
+
+      console.log('%c📋 VilarDS Docs & RGE v2.0 — PWA Ready', 'color:#4ADE80;font-size:12px;font-weight:bold;');
+    }
+
+    // Exposition minimale pour les onclick HTML
+    window.App    = App;
+    window.Render = Render;
+
+    // Démarrage
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+      initApp();
+    }
+
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1C2B3A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Vilar DS — Chantiers & Projets 2026</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <script src="vilar-core.js"></script>
+  <script src="ui-components.js"></script>
+  <style>
+    /* ── Statuts chantiers ── */
+    .s-dv  { background:rgba(124,58,237,.15); color:#A78BFA; border:1px solid rgba(124,58,237,.2); }
+    .s-ec  { background:rgba(234,179,8,.15);  color:var(--jn);  border:1px solid rgba(234,179,8,.2);  }
+    .s-pl  { background:rgba(122,143,166,.12);color:var(--am);  border:1px solid rgba(122,143,166,.2);}
+    .s-pa  { background:rgba(248,113,113,.12);color:var(--rll); border:1px solid rgba(248,113,113,.2);}
+    .s-tr  { background:rgba(74,222,128,.12); color:var(--vll); border:1px solid rgba(74,222,128,.2); }
+
+    /* ── Card chantier ── */
+    .cgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); gap:13px; }
+    .cc    { background:var(--bg); border:1px solid var(--bd); border-radius:var(--radius); overflow:hidden; cursor:pointer; transition:var(--trans); }
+    .cc:hover { transform:translateY(-2px); border-color:rgba(200,168,75,.28); box-shadow:var(--shadow-lg); }
+    .csb   { height:3px; }
+    .csb.devis    { background:linear-gradient(90deg,#7C3AED,#A78BFA); }
+    .csb.en-cours { background:linear-gradient(90deg,var(--bc),var(--or)); }
+    .csb.planifie { background:rgba(122,143,166,.5); }
+    .csb.en-pause { background:var(--rll); }
+    .csb.termine  { background:linear-gradient(90deg,var(--vl),var(--vll)); }
+    .ct    { padding:12px 14px; }
+    .ch    { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px; }
+    .cref  { font-size:9.5px; color:var(--af); font-weight:600; text-transform:uppercase; letter-spacing:1px; }
+    .ctit  { font-family:'Syne',sans-serif; font-size:13.5px; font-weight:800; line-height:1.3; }
+    .cmeta { display:grid; grid-template-columns:1fr 1fr; gap:3px; margin-top:6px; }
+    .cm    { font-size:11px; color:var(--af); }
+    .pw    { padding:0 14px 10px; }
+    .plb   { display:flex; justify-content:space-between; font-size:10.5px; color:var(--af); margin-bottom:3px; }
+    .pt    { height:5px; background:rgba(255,255,255,.07); border-radius:3px; overflow:hidden; }
+    .pf    { height:100%; border-radius:3px; transition:width .6s ease; }
+    .pf.en-cours { background:linear-gradient(90deg,var(--bc),var(--or)); }
+    .pf.termine  { background:linear-gradient(90deg,var(--vl),var(--vll)); }
+    .pf.planifie { background:rgba(122,143,166,.6); }
+    .pf.devis    { background:linear-gradient(90deg,#7C3AED,#A78BFA); }
+    .pf.en-pause { background:rgba(248,113,113,.6); }
+    .cf    { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-top:1px solid var(--bd); }
+    .cbl   { font-size:9.5px; color:var(--af); text-transform:uppercase; letter-spacing:1px; }
+    .cbg   { font-family:'Syne',sans-serif; font-size:15px; font-weight:800; color:var(--or); }
+
+    /* ── Filter bar ── */
+    .fbar  { display:flex; gap:5px; margin-bottom:13px; flex-wrap:wrap; }
+    .fb    { padding:6px 12px; border-radius:7px; font-size:11.5px; cursor:pointer; border:1px solid var(--bd); color:var(--af); background:transparent; transition:var(--trans); font-family:'DM Sans',sans-serif; }
+    .fb:hover  { color:var(--ac); }
+    .fb.active { background:var(--ba); color:white; border-color:transparent; }
+
+    /* ── Gantt ── */
+    .gw  { overflow-x:auto; }
+    .gg  { min-width:700px; }
+    .ghead{ display:grid; grid-template-columns:160px repeat(12,1fr); margin-bottom:4px; }
+    .gm  { font-size:9px; color:var(--af); text-align:center; font-weight:600; }
+    .grow{ display:grid; grid-template-columns:160px repeat(12,1fr); margin-bottom:3px; align-items:center; }
+    .gname{ font-size:10.5px; font-weight:600; color:var(--am); padding-right:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .gcell{ position:relative; height:18px; }
+    .gbar { position:absolute; top:3px; height:12px; border-radius:3px; }
+
+    /* ── Planning hebdo ── */
+    .week-grid { display:grid; grid-template-columns:90px repeat(5,1fr); gap:1px; background:var(--bd); border-radius:8px; overflow:hidden; font-size:9.5px; }
+    .wg  { padding:7px 5px; text-align:center; background:#0D1B27; }
+    .wh  { background:#111E2D; color:var(--af); font-weight:600; font-size:8.5px; text-transform:uppercase; }
+    .wn  { text-align:left; padding-left:10px; font-weight:600; }
+    .wa  { background:rgba(200,168,75,.15); color:var(--or); }
+    .wp  { background:rgba(74,123,168,.15); color:var(--bc); }
+    .wf  { background:rgba(122,143,166,.05); color:rgba(122,143,166,.4); }
+    .eq-card{ background:var(--bg); border:1px solid var(--bd); border-radius:var(--radius); overflow:hidden; margin-bottom:11px; }
+    .eq-hdr { display:flex; align-items:center; justify-content:space-between; padding:13px 15px; }
+
+    /* ── Alertes ── */
+    .alerte-item { display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:var(--bg); border:1px solid var(--bd); border-radius:9px; margin-bottom:9px; cursor:pointer; transition:var(--trans); }
+    .alerte-item:hover { border-color:rgba(200,168,75,.2); }
+    .alerte-item.urgent { border-left:3px solid var(--rll); }
+    .alerte-item.warning{ border-left:3px solid var(--jn);  }
+    .alerte-item.info   { border-left:3px solid var(--bc);  }
+    .al-icon { font-size:20px; flex-shrink:0; }
+    .al-body { flex:1; }
+    .al-title{ font-size:12.5px; font-weight:600; margin-bottom:2px; }
+    .al-sub  { font-size:11px; color:var(--af); }
+    .al-date { font-size:10.5px; color:var(--af); margin-top:3px; }
+    .al-badge{ font-size:9.5px; font-weight:700; padding:2px 8px; border-radius:9px; flex-shrink:0; }
+    .ab-u { background:rgba(248,113,113,.15); color:var(--rll); border:1px solid rgba(248,113,113,.2); }
+    .ab-w { background:rgba(234,179,8,.12);   color:var(--jn);  border:1px solid rgba(234,179,8,.2);  }
+    .ab-i { background:rgba(74,123,168,.12);  color:var(--bc);  border:1px solid rgba(74,123,168,.2); }
+
+    /* ── Financier dépenses ── */
+    .fin-track{ height:10px; background:rgba(255,255,255,.07); border-radius:5px; overflow:hidden; position:relative; margin:6px 0; }
+    .fin-fill { height:100%; border-radius:5px; transition:width .7s ease; }
+    .fin-ok   { background:linear-gradient(90deg,var(--bc),var(--vll)); }
+    .fin-warn { background:linear-gradient(90deg,var(--bc),var(--jn));  }
+    .fin-over { background:linear-gradient(90deg,var(--jn),var(--rll)); }
+    .dep-row  { display:flex; align-items:center; gap:9px; padding:8px 0; border-bottom:1px solid var(--bd); }
+    .dep-row:last-child { border-bottom:none; }
+    .dep-dot  { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+    /* ── Phases ── */
+    .pi  { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--bd); }
+    .pi:last-child { border-bottom:none; }
+    .pd  { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .pd.done   { background:var(--vll); }
+    .pd.active { background:var(--or); box-shadow:0 0 6px var(--or); }
+    .pd.todo   { background:rgba(122,143,166,.3); border:1px solid var(--af); }
+    .pn  { flex:1; font-size:12.5px; font-weight:500; }
+    .pdt { font-size:10.5px; color:var(--af); }
+    .pst { font-size:9.5px; font-weight:700; padding:2px 8px; border-radius:9px; white-space:nowrap; }
+    .pst.done   { background:rgba(74,222,128,.12); color:var(--vll); }
+    .pst.active { background:rgba(200,168,75,.12); color:var(--or);  }
+    .pst.todo   { background:rgba(122,143,166,.1); color:var(--af);  }
+
+    /* ── Journal ── */
+    .li  { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid var(--bd); }
+    .li:last-child { border-bottom:none; }
+    .lav { width:28px; height:28px; border-radius:50%; background:rgba(200,168,75,.15); color:var(--or); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; flex-shrink:0; }
+    .lm  { font-size:10.5px; color:var(--af); margin-bottom:2px; }
+    .lt  { font-size:12.5px; line-height:1.5; }
+    .la  { display:flex; gap:8px; margin-top:12px; }
+    .la textarea { flex:1; }
+
+    /* ── Photos ── */
+    .photo-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; margin-bottom:12px; }
+    .photo-item { position:relative; border-radius:8px; overflow:hidden; aspect-ratio:1; cursor:pointer; }
+    .photo-item img { width:100%; height:100%; object-fit:cover; }
+    .photo-del  { position:absolute; top:4px; right:4px; background:rgba(0,0,0,.6); color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .photo-cap  { position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,.6); color:white; font-size:9px; padding:3px 5px; }
+    .upload-zone{ border:2px dashed var(--bd); border-radius:9px; padding:18px; text-align:center; cursor:pointer; transition:var(--trans); }
+    .upload-zone:hover { border-color:var(--bc); background:rgba(74,123,168,.05); }
+    .upload-zone input { display:none; }
+
+    /* ── Photo viewer ── */
+    #photoViewer { position:fixed; inset:0; background:rgba(0,0,0,.93); z-index:300; display:none; align-items:center; justify-content:center; }
+    #photoViewer.open { display:flex; }
+    #pvImg { max-width:95vw; max-height:90vh; border-radius:8px; }
+    .pv-close { position:absolute; top:16px; right:20px; color:white; font-size:28px; cursor:pointer; }
+
+    /* ── Détail (2 colonnes) ── */
+    .dg { display:grid; grid-template-columns:1fr 1fr; gap:13px; margin-bottom:13px; }
+
+    /* ── Validation modal ── */
+    .validation-msg { font-size:10px; color:var(--rll); margin-top:2px; display:none; }
+    .has-err .validation-msg { display:block; }
+    .has-err .fi { border-color:rgba(248,113,113,.5); }
+
+    @media (max-width:768px) { .cgrid { grid-template-columns:1fr; } .dg { grid-template-columns:1fr; } .cmeta { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div id="sb-mount"></div>
+  <div id="hdr-mount"></div>
+  <div id="banner-mount"></div>
+  <div id="modal-mount"></div>
+
+  <!-- Photo viewer -->
+  <div id="photoViewer" onclick="this.classList.remove('open')">
+    <span class="pv-close" onclick="event.stopPropagation();document.getElementById('photoViewer').classList.remove('open')">✕</span>
+    <img id="pvImg" src="" alt="Photo chantier">
+  </div>
+
+  <!-- Import caché -->
+  <input type="file" id="importFile" accept=".json" style="display:none" onchange="Chantiers.handleImport(this)">
+
+  <main id="main">
+
+    <!-- DASHBOARD -->
+    <div class="view active" id="view-dashboard">
+      <div style="margin-bottom:16px;">
+        <h1 style="font-family:'Syne',sans-serif;font-size:21px;font-weight:800;">Vue d'ensemble <span style="color:var(--or);">2026</span></h1>
+        <p style="color:var(--af);font-size:12px;margin-top:2px;">Suivi global — SARL Vilar DS, Semoy (45400)</p>
+      </div>
+      <div class="kg" id="dashKpis"></div>
+      <div class="dual">
+        <div class="sec" style="margin-bottom:0;"><h3>🏗 Chantiers actifs</h3><div id="dashActifs"></div></div>
+        <div class="sec" style="margin-bottom:0;"><h3>🔔 Alertes récentes</h3><div id="dashAlertesMini"></div></div>
+      </div>
+      <div class="sec"><h3>Répartition CA 2026 par chantier</h3><div id="dashBudgets"></div></div>
+    </div>
+
+    <!-- ALERTES -->
+    <div class="view" id="view-alertes">
+      <div class="sh"><div class="st">🔔 Alertes & Rappels</div></div>
+      <div id="alertesContent"></div>
+    </div>
+
+    <!-- PLANNING ÉQUIPES -->
+    <div class="view" id="view-planning-eq">
+      <div class="sh">
+        <div class="st">👷 Planning Équipes</div>
+        <span style="font-size:11px;color:var(--af);">Semaine du 28 Avr — 02 Mai 2026</span>
+      </div>
+      <div class="sec">
+        <h3>Planning hebdomadaire</h3>
+        <div style="overflow-x:auto;"><div class="week-grid" id="weekGrid"></div></div>
+      </div>
+      <div id="equipesCards"></div>
+    </div>
+
+    <!-- LISTE -->
+    <div class="view" id="view-liste">
+      <div class="sh"><div class="st">Tous les chantiers</div><button class="bo" onclick="Chantiers.openModal()">+ Nouveau</button></div>
+      <div class="fbar">
+        <button class="fb active" onclick="Chantiers.filterC('tous',this)">Tous</button>
+        <button class="fb" onclick="Chantiers.filterC('devis',this)">🟣 Devis</button>
+        <button class="fb" onclick="Chantiers.filterC('planifie',this)">⬜ Planifié</button>
+        <button class="fb" onclick="Chantiers.filterC('en-cours',this)">🟡 En cours</button>
+        <button class="fb" onclick="Chantiers.filterC('en-pause',this)">🔴 Pause</button>
+        <button class="fb" onclick="Chantiers.filterC('termine',this)">🟢 Terminé</button>
+      </div>
+      <div class="cgrid" id="chantiersGrid"></div>
+    </div>
+
+    <!-- GANTT -->
+    <div class="view" id="view-planning">
+      <div class="sh"><div class="st">📅 Planning Gantt 2026</div></div>
+      <div class="sec">
+        <div class="gw"><div class="gg" id="ganttGrid"></div></div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:11px;font-size:11.5px;border-top:1px solid var(--bd);padding-top:10px;">
+          <span><span style="display:inline-block;width:11px;height:6px;border-radius:2px;background:linear-gradient(90deg,var(--bc),var(--or));margin-right:4px;vertical-align:middle;"></span>En cours</span>
+          <span><span style="display:inline-block;width:11px;height:6px;border-radius:2px;background:linear-gradient(90deg,#1A6B3A,var(--vll));margin-right:4px;vertical-align:middle;"></span>Terminé</span>
+          <span><span style="display:inline-block;width:11px;height:6px;border-radius:2px;background:rgba(248,113,113,.6);margin-right:4px;vertical-align:middle;"></span>Pause</span>
+          <span><span style="display:inline-block;width:11px;height:6px;border-radius:2px;background:linear-gradient(90deg,#7C3AED,#A78BFA);margin-right:4px;vertical-align:middle;"></span>Devis</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATUTS -->
+    <div class="view" id="view-devis">
+      <div class="sh"><div class="st">🟣 Devis en attente</div><button class="bo" onclick="Chantiers.openModal('devis')">+ Nouveau devis</button></div>
+      <div class="cgrid" id="devisGrid"></div>
+    </div>
+    <div class="view" id="view-en-cours">
+      <div class="sh"><div class="st">🟡 Chantiers en cours</div></div>
+      <div class="cgrid" id="enCoursGrid"></div>
+    </div>
+    <div class="view" id="view-termines">
+      <div class="sh"><div class="st">🟢 Terminés</div></div>
+      <div class="cgrid" id="terminesGrid"></div>
+    </div>
+
+    <!-- DÉTAIL -->
+    <div class="view" id="view-detail">
+      <div class="back" onclick="VilarCore.nav.back()">← Retour</div>
+      <div id="detailContent"></div>
+    </div>
+
+    <!-- PARAMÈTRES -->
+    <div class="view" id="view-parametres">
+      <div style="margin-bottom:16px;">
+        <h1 style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;">⚙ Paramètres</h1>
+      </div>
+      <div class="sec">
+        <h3>Équipes & Membres</h3>
+        <div id="equipesParam"></div>
+        <button class="bo" style="margin-top:12px;" onclick="Chantiers.saveEquipes()">💾 Enregistrer équipes</button>
+      </div>
+      <div class="sec">
+        <h3>Gestion des données</h3>
+        <div style="display:flex;gap:9px;flex-wrap:wrap;">
+          <button class="bo" onclick="VilarCore.io.exportJSON(Chantiers.getData(),'Chantiers')">↓ Export JSON</button>
+          <button class="bou" onclick="document.getElementById('importFile').click()">↑ Importer JSON</button>
+          <button class="bou" onclick="Chantiers.exportCSV()">↓ CSV</button>
+          <button class="bd2" onclick="Chantiers.clearAll()">🗑 Réinitialiser tout</button>
+        </div>
+        <div id="dataStats" style="margin-top:10px;font-size:11.5px;color:var(--af);"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal chantier (statique — contenu dans le HTML car form complexe) -->
+  <div id="modalOv" onclick="if(event.target===this)VilarCore.modal.close()" style="position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:13px;overflow-y:auto;">
+    <div class="mdl">
+      <div class="mh">
+        <div>
+          <div style="font-size:9px;color:var(--af);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Vilar DS · Gestion chantiers</div>
+          <h2 id="mTitle">Nouveau chantier</h2>
+        </div>
+        <div class="mx" onclick="Chantiers.closeModal()">✕</div>
+      </div>
+      <div class="mb">
+        <div class="fg">
+          <div class="f1 full" id="fv-titre">
+            <label class="fl">Intitulé *</label>
+            <input class="fi" id="f-titre" type="text" placeholder="Ex: Extension R+1 — Olivet" oninput="this.closest('.f1').classList.remove('has-err')">
+            <span class="validation-msg">Champ obligatoire</span>
+          </div>
+          <div class="f1" id="fv-client">
+            <label class="fl">Client *</label>
+            <input class="fi" id="f-client" type="text" oninput="this.closest('.f1').classList.remove('has-err')">
+            <span class="validation-msg">Champ obligatoire</span>
+          </div>
+          <div class="f1"><label class="fl">Téléphone</label><input class="fi" id="f-tel" type="tel" placeholder="06 XX XX XX XX"></div>
+          <div class="f1 full"><label class="fl">Adresse chantier</label><input class="fi" id="f-adresse" type="text"></div>
+          <div class="f1"><label class="fl">Type de travaux</label>
+            <select class="fi" id="f-type">
+              <option value="">Sélectionner...</option>
+              <option>Maçonnerie générale</option><option>Gros œuvre</option>
+              <option>Extension / surélévation</option><option>Rénovation complète</option>
+              <option>Isolation RGE (ITE)</option><option>Isolation RGE (ITI)</option>
+              <option>Isolation combles</option><option>Ravalement façade</option>
+              <option>Réfection toiture</option><option>Carrelage / revêtements</option>
+              <option>Construction neuve</option><option>Divers / TCE</option>
+            </select>
+          </div>
+          <div class="f1"><label class="fl">Statut</label>
+            <select class="fi" id="f-statut">
+              <option value="devis">🟣 Devis</option><option value="planifie">⬜ Planifié</option>
+              <option value="en-cours">🟡 En cours</option><option value="en-pause">🔴 En pause</option>
+              <option value="termine">🟢 Terminé</option>
+            </select>
+          </div>
+          <div class="f1" id="fv-budget">
+            <label class="fl">Budget HT (€) *</label>
+            <input class="fi" id="f-budget" type="number" min="0" step="100" oninput="this.closest('.f1').classList.remove('has-err')">
+            <span class="validation-msg">Montant requis (&gt; 0)</span>
+          </div>
+          <div class="f1"><label class="fl">Avancement (%)</label><input class="fi" id="f-avanc" type="number" min="0" max="100" step="5" value="0"></div>
+          <div class="f1"><label class="fl">Date début</label><input class="fi" id="f-debut" type="date"></div>
+          <div class="f1"><label class="fl">Date fin prévue</label><input class="fi" id="f-fin" type="date"></div>
+          <div class="f1"><label class="fl">Chef de chantier</label>
+            <select class="fi" id="f-chef"><option>Julio (Gérant)</option><option>Équipe A</option><option>Équipe B</option><option>Sous-traitant</option></select>
+          </div>
+          <div class="f1"><label class="fl">RGE ?</label>
+            <select class="fi" id="f-rge"><option value="non">Non</option><option value="oui">Oui — RGE Vilar DS</option></select>
+          </div>
+          <div class="f1 full"><label class="fl">Description</label>
+            <textarea class="fi fi-area" id="f-desc" placeholder="Descriptif, particularités, conditions..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="mf">
+        <button class="bg2" onclick="Chantiers.closeModal()">Annuler</button>
+        <button class="bo" onclick="Chantiers.saveChantier()">💾 Enregistrer</button>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    'use strict';
+
+    /* ── Raccourcis core ── */
+    const { db, bus, persistence, toast, nav, io, utils, safeIcons, pwa, MA, MOIS, TODAY } = VilarCore;
+    const $ = utils.$;
+    const fmtD = utils.fmtD;
+
+    /* ── Helpers locaux ── */
+    const fmt = n => Number(n||0).toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:0}) + ' €';
+    const sl  = s => ({devis:'Devis','en-cours':'En cours',planifie:'Planifié','en-pause':'En pause',termine:'Terminé'}[s]||s);
+    const sc  = s => ({devis:'s-dv','en-cours':'s-ec',planifie:'s-pl','en-pause':'s-pa',termine:'s-tr'}[s]||'');
+
+    /* ── Config ── */
+    const MODULE_KEY  = 'chantiers';
+    const LEGACY_DB   = 'VilarDS_Chantiers_DB';
+    const LEGACY_STORE= 'chantierdata';
+    const LEGACY_KEY  = 'chantiers';
+    const CAT_COLORS  = {'Matériaux':'#4A7BA8','Location':'#C8A84B','Sous-traitance':'#A78BFA',"Main d'œuvre":'#4ADE80','Divers':'#7A8FA6'};
+    const GANTT_COLS  = {'en-cours':'linear-gradient(90deg,#4A7BA8,#C8A84B)','termine':'linear-gradient(90deg,#1A6B3A,#4ADE80)','en-pause':'rgba(248,113,113,.5)','planifie':'rgba(122,143,166,.4)','devis':'linear-gradient(90deg,#7C3AED,#A78BFA)'};
+
+    /* ════════════════════════════════════════════════════════════════
+       DONNÉES PAR DÉFAUT
+    ════════════════════════════════════════════════════════════════ */
+    const DEFAULT_CHANTIERS = [
+      {id:1,ref:'VDS-2026-001',titre:'Extension R+1 — Maçonnerie & gros œuvre',client:'M. et Mme Fontaine',tel:'06 12 34 56 78',adresse:'12 rue des Lilas, Olivet (45160)',type:'Extension / surélévation',statut:'en-cours',budget:42000,avanc:65,debut:'2026-02-10',fin:'2026-06-30',chef:'Julio (Gérant)',rge:'non',desc:'Extension de 45 m² sur R+1. Fondations, dalle, maçonnerie, charpente, couverture.',photos:[],depenses:[{id:1,cat:'Matériaux',desc:'Ferraillage + ciment',mont:3200,date:'2026-03-10'},{id:2,cat:'Location',desc:'Toupie béton + coffrage',mont:1400,date:'2026-03-22'},{id:3,cat:'Sous-traitance',desc:'Charpentier bois',mont:8500,date:'2026-04-05'}],phases:[{n:'Fondations & terrassement',s:'done',d:'Fév 2026'},{n:'Gros œuvre maçonnerie',s:'done',d:'Mar 2026'},{n:'Charpente bois',s:'active',d:'Avr 2026'},{n:'Couverture & étanchéité',s:'todo',d:'Mai 2026'},{n:'Finitions & réception',s:'todo',d:'Jun 2026'}],logs:[{d:'15 Avr 2026',a:'Julio',m:'Charpente livrée. Pose en cours, 2 hommes. RAS.'},{d:'02 Avr 2026',a:'Julio',m:'Maçonnerie R+1 terminée. Béton conforme.'}],dm:1,fm:5,equipe:['Julio (Gérant)','Équipe A']},
+      {id:2,ref:'VDS-2026-002',titre:'Isolation thermique extérieure RGE (ITE)',client:'M. Bernard Chavot',tel:'07 65 43 21 09',adresse:'8 allée des Chênes, Chécy (45430)',type:'Isolation RGE (ITE)',statut:'en-cours',budget:18500,avanc:40,debut:'2026-03-15',fin:'2026-05-20',chef:'Équipe A',rge:'oui',desc:'ITE laine de roche 14cm sur 120m². Enduit minéral. Dossier MaPrimeRénov déposé.',photos:[],depenses:[{id:1,cat:'Matériaux',desc:'Isolant laine de roche 14cm',mont:4200,date:'2026-03-18'},{id:2,cat:'Location',desc:'Échafaudage 4 semaines',mont:1800,date:'2026-03-15'}],phases:[{n:'Préparation & échafaudage',s:'done',d:'Mar 2026'},{n:'Pose isolant',s:'active',d:'Avr 2026'},{n:'Sous-enduit + armature',s:'todo',d:'Avr 2026'},{n:'Enduit de finition',s:'todo',d:'Mai 2026'},{n:'Réception & docs RGE',s:'todo',d:'Mai 2026'}],logs:[{d:'12 Avr 2026',a:'Julio',m:'50% pose isolant. Météo ok. Pignon nord demain.'}],dm:2,fm:4,equipe:['Équipe A']},
+      {id:3,ref:'VDS-2026-003',titre:'Rénovation salle de bain + WC',client:'Mme Claire Aubert',tel:'06 98 76 54 32',adresse:'34 rue du Moulin, Mardié (45430)',type:'Rénovation complète',statut:'en-cours',budget:9800,avanc:80,debut:'2026-03-01',fin:'2026-04-25',chef:'Julio (Gérant)',rge:'non',desc:'Dépose complète, carrelage, douche italienne, WC suspendu, peinture.',photos:[],depenses:[{id:1,cat:'Matériaux',desc:'Carrelage grès cérame',mont:1100,date:'2026-03-20'},{id:2,cat:'Matériaux',desc:'Sanitaires complets',mont:1900,date:'2026-03-25'}],phases:[{n:'Démolition & dépose',s:'done',d:'Mar 2026'},{n:'Plomberie brute',s:'done',d:'Mar 2026'},{n:'Carrelage sol & murs',s:'done',d:'Avr 2026'},{n:'Équipements sanitaires',s:'active',d:'Avr 2026'},{n:'Peinture & finitions',s:'todo',d:'Avr 2026'}],logs:[{d:'14 Avr 2026',a:'Julio',m:'Carrelage terminé. Sanitaires mercredi.'}],dm:2,fm:3,equipe:['Julio (Gérant)']},
+      {id:4,ref:'VDS-2026-004',titre:'Construction maison T4 — gros œuvre',client:'M. et Mme Perrin',tel:'06 11 22 33 44',adresse:'ZAC Les Pinsons, La Chapelle-Saint-Mesmin',type:'Gros œuvre',statut:'en-cours',budget:68000,avanc:25,debut:'2026-04-07',fin:'2026-10-31',chef:'Julio (Gérant)',rge:'non',desc:'Gros œuvre seul — fondations, dalle, voiles béton, plancher, charpente. Maison 120m².',photos:[],depenses:[{id:1,cat:'Matériaux',desc:'BPE béton prêt emploi',mont:5600,date:'2026-04-15'},{id:2,cat:'Matériaux',desc:'Ferraillage fondations',mont:3100,date:'2026-04-10'},{id:3,cat:'Location',desc:'Grue + étaiements',mont:2200,date:'2026-04-07'}],phases:[{n:'Terrassement & installation',s:'done',d:'Avr 2026'},{n:'Fondations',s:'active',d:'Avr-Mai'},{n:'Dalle RdC & voiles',s:'todo',d:'Mai-Jun'},{n:'Plancher haut',s:'todo',d:'Jun-Jul'},{n:'Charpente',s:'todo',d:'Aoû'},{n:'Réception gros œuvre',s:'todo',d:'Oct 2026'}],logs:[{d:'20 Avr 2026',a:'Julio',m:'Terrassement terminé. Fouilles conformes.'}],dm:3,fm:9,equipe:['Julio (Gérant)','Équipe B']},
+      {id:5,ref:'VDS-2026-005',titre:'Réfection toiture — tuiles mécaniques',client:'M. Jacques Morin',tel:'06 55 66 77 88',adresse:'27 rue du Bourg, Ingré (45140)',type:'Réfection toiture',statut:'planifie',budget:14200,avanc:0,debut:'2026-05-12',fin:'2026-06-15',chef:'Équipe B',rge:'non',desc:'Dépose, voligeage, contre-liteaux, tuiles mécaniques, faîtage, solins.',photos:[],depenses:[],phases:[{n:'Dépose ancienne couverture',s:'todo',d:'Mai 2026'},{n:'Voligeage + sous-toiture',s:'todo',d:'Mai 2026'},{n:'Pose tuiles mécaniques',s:'todo',d:'Jun 2026'},{n:'Faîtage & finitions',s:'todo',d:'Jun 2026'}],logs:[],dm:4,fm:5,equipe:['Équipe B']},
+      {id:6,ref:'VDS-2026-006',titre:'Ravalement + isolation combles RGE',client:'M. et Mme Delorme',tel:'07 12 34 56 78',adresse:'15 impasse des Peupliers, Saint-Jean-de-Braye',type:'Isolation RGE (ITI)',statut:'devis',budget:22000,avanc:0,debut:'2026-07-01',fin:'2026-08-31',chef:'Julio (Gérant)',rge:'oui',desc:'Devis en validation. Ravalement + combles perdus 30cm. CEE + MaPrimeRénov.',photos:[],depenses:[],phases:[{n:'Validation devis & aides',s:'active',d:'Avr-Mai 2026'},{n:'Ravalement façade',s:'todo',d:'Jul 2026'},{n:'Isolation combles perdus',s:'todo',d:'Aoû 2026'}],logs:[{d:'10 Avr 2026',a:'Julio',m:'Devis envoyé 05/04. Relance 20/04. Client attend aides.'}],dm:6,fm:7,equipe:[]},
+      {id:7,ref:'VDS-2026-007',titre:'Mur de clôture + portail motorisé',client:'M. Arnaud Tessier',tel:'06 78 90 12 34',adresse:'5 chemin du Pressoir, Semoy (45400)',type:'Maçonnerie générale',statut:'devis',budget:7800,avanc:0,debut:'2026-06-01',fin:'2026-06-30',chef:'Équipe A',rge:'non',desc:'Mur parpaing enduit 35ml H1.80m + portail alu motorisé 4m.',photos:[],depenses:[],phases:[{n:'Validation devis',s:'active',d:'Avr 2026'},{n:'Fondations & dés béton',s:'todo',d:'Jun 2026'},{n:'Maçonnerie mur',s:'todo',d:'Jun 2026'},{n:'Pose portail & motorisation',s:'todo',d:'Jun 2026'}],logs:[],dm:5,fm:5,equipe:[]},
+      {id:8,ref:'VDS-2026-008',titre:'Extension ossature bois 35m² + terrasse',client:'M. et Mme Garcia',tel:'06 23 45 67 89',adresse:"22 rue des Vignes, Saint-Denis-de-l'Hôtel",type:'Extension / surélévation',statut:'devis',budget:38000,avanc:0,debut:'2026-09-01',fin:'2026-11-30',chef:'Julio (Gérant)',rge:'non',desc:"Extension bois 35m² + terrasse 20m². PC en cours d'instruction.",photos:[],depenses:[],phases:[{n:"Obtention PC + validation",s:'active',d:'Avr-Aoû 2026'},{n:'Fondations',s:'todo',d:'Sep 2026'},{n:'Ossature bois & charpente',s:'todo',d:'Oct 2026'},{n:'Terrasse & finitions',s:'todo',d:'Nov 2026'}],logs:[{d:'08 Avr 2026',a:'Julio',m:'PC déposé 02/04. Délai 2 mois. Devis accepté sous réserve.'}],dm:8,fm:10,equipe:[]},
+      {id:9,ref:'VDS-2026-009',titre:'Dalle béton garage + carrelage',client:'Mme Sophie Laurent',tel:'07 89 01 23 45',adresse:'9 rue des Acacias, Combleux (45800)',type:'Maçonnerie générale',statut:'termine',budget:6400,avanc:100,debut:'2026-01-15',fin:'2026-02-05',chef:'Équipe A',rge:'non',desc:'Dalle béton 50m² ep.12cm treillis soudé + carrelage grès cérame 60x60.',photos:[],depenses:[{id:1,cat:'Matériaux',desc:'Béton + carrelage',mont:2800,date:'2026-01-16'}],phases:[{n:'Terrassement & fond',s:'done',d:'Jan 2026'},{n:'Ferraillage & béton',s:'done',d:'Jan 2026'},{n:'Pose carrelage',s:'done',d:'Fév 2026'},{n:'Réception & solde',s:'done',d:'Fév 2026'}],logs:[{d:'05 Fév 2026',a:'Julio',m:'Réception OK. Cliente satisfaite.'}],dm:0,fm:1,equipe:['Équipe A']},
+      {id:10,ref:'VDS-2026-010',titre:'Isolation combles perdus RGE',client:'M. Roger Blanchard',tel:'06 34 56 78 90',adresse:'18 route de Sully, Jargeau (45150)',type:'Isolation RGE (ITI)',statut:'termine',budget:3800,avanc:100,debut:'2026-01-08',fin:'2026-01-22',chef:'Équipe B',rge:'oui',desc:'Soufflage laine de verre 30cm — 90m². Attestation RGE remise.',photos:[],depenses:[{id:1,cat:'Matériaux',desc:'Laine de verre soufflée',mont:1200,date:'2026-01-08'}],phases:[{n:'Préparation & calfeutrement',s:'done',d:'Jan 2026'},{n:'Soufflage laine de verre',s:'done',d:'Jan 2026'},{n:'Remise attestation RGE',s:'done',d:'Jan 2026'}],logs:[{d:'22 Jan 2026',a:'Julio',m:'Terminé en 1.5 jours. Attestation remise. MaPrimeRénov complet.'}],dm:0,fm:0,equipe:['Équipe B']},
+    ];
+
+    const DEFAULT_EQUIPES = [
+      {id:'julio',name:'Julio Vilar',role:'Gérant — Chef chantier',color:'#C8A84B',initiales:'JV',semaine:['VDS-001','VDS-001','VDS-003','VDS-003','BUREAU'],chantiers:['VDS-2026-001','VDS-2026-003','VDS-2026-004']},
+      {id:'eqA',name:'Équipe A',role:'Maçonnerie & Isolation',color:'#4A7BA8',initiales:'A',semaine:['VDS-002','VDS-002','VDS-002','VDS-002','LIBRE'],chantiers:['VDS-2026-002','VDS-2026-005']},
+      {id:'eqB',name:'Équipe B',role:'Gros œuvre & TCE',color:'#4ADE80',initiales:'B',semaine:['VDS-004','VDS-004','VDS-004','LIBRE','LIBRE'],chantiers:['VDS-2026-004','VDS-2026-010']},
+      {id:'sst',name:'Sous-traitant',role:'Charpente / Spécialités',color:'#A78BFA',initiales:'ST',semaine:['LIBRE','LIBRE','VDS-001','VDS-001','LIBRE'],chantiers:[]},
+    ];
+
+    /* ════════════════════════════════════════════════════════════════
+       STATE
+    ════════════════════════════════════════════════════════════════ */
+    let chantiers  = DEFAULT_CHANTIERS.map(c => ({...c, depenses:[...c.depenses], photos:[...c.photos], phases:[...c.phases], logs:[...c.logs]}));
+    let equipes    = DEFAULT_EQUIPES.map(e => ({...e, semaine:[...e.semaine], chantiers:[...e.chantiers]}));
+    let nextId     = 100;
+    let nextDepId  = 200;
+    let curFilter  = 'tous';
+
+    /* ════════════════════════════════════════════════════════════════
+       PERSISTANCE
+    ════════════════════════════════════════════════════════════════ */
+    const Chantiers = {
+      getData() { return { chantiers, equipes, nextId, nextDepId }; },
+      applyData(s) {
+        if (s.chantiers) chantiers = s.chantiers;
+        if (s.equipes)   equipes   = s.equipes;
+        if (s.nextId)    nextId    = s.nextId;
+        if (s.nextDepId) nextDepId = s.nextDepId;
+      },
+      getSnapshot() {
+        return {
+          chantiers: chantiers.map(c => ({id:c.id,ref:c.ref,titre:c.titre,client:c.client,statut:c.statut,budget:c.budget,avanc:c.avanc,depenses:c.depenses,debut:c.debut,fin:c.fin})),
+          budgetTotal: chantiers.reduce((s,c)=>s+c.budget,0),
+          nbActifs: chantiers.filter(c=>c.statut==='en-cours').length,
+        };
+      },
+      validateImport: d => d && Array.isArray(d.chantiers),
+
+      /* ── ALERTES ENGINE ── */
+      computeAlertes() {
+        const al = [];
+        chantiers.forEach(c => {
+          if (c.statut==='devis' && c.logs.length>0)
+            al.push({type:'urgent',icon:'📋',titre:'Devis sans réponse — '+c.ref,sub:c.client+' · Relance recommandée',date:'Envoi il y a +15 jours',ref:c.id});
+          if (c.fin && (c.statut==='en-cours'||c.statut==='planifie')) {
+            const diff=Math.ceil((new Date(c.fin)-TODAY)/864e5);
+            if (diff>=0&&diff<=14) al.push({type:'urgent',icon:'⏰',titre:'Fin imminente — '+c.ref,sub:c.titre+' · '+c.client,date:'Fin prévue : '+fmtD(c.fin)+' (dans '+diff+' j)',ref:c.id});
+          }
+          if (c.statut==='en-cours'&&!c.logs.length)
+            al.push({type:'warning',icon:'📝',titre:'Aucune note — '+c.ref,sub:c.titre+' · Pas de journal de bord',date:'Ajoutez une note de suivi',ref:c.id});
+          const dep=c.depenses.reduce((s,d)=>s+d.mont,0);
+          const pct=c.budget>0?(dep/c.budget)*100:0;
+          if (pct>70&&c.statut!=='termine') al.push({type:pct>90?'urgent':'warning',icon:'💸',titre:'Dépenses élevées — '+c.ref,sub:c.titre+' · '+Math.round(pct)+'% du budget consommé',date:'Budget: '+fmt(c.budget)+' · Dépenses: '+fmt(dep),ref:c.id});
+          if (c.statut==='planifie'&&c.debut) {
+            const diff=Math.ceil((new Date(c.debut)-TODAY)/864e5);
+            if (diff>=0&&diff<=21) al.push({type:'info',icon:'🗓',titre:'Démarrage proche — '+c.ref,sub:c.titre+' · '+c.client,date:'Début : '+fmtD(c.debut)+' (dans '+diff+' j)',ref:c.id});
+          }
+        });
+        return al;
+      },
+
+      /* ── DASHBOARD ── */
+      renderDashboard() {
+        const ec=chantiers.filter(c=>c.statut==='en-cours');
+        const tr=chantiers.filter(c=>c.statut==='termine');
+        const dv=chantiers.filter(c=>c.statut==='devis');
+        const bTotal=chantiers.reduce((s,c)=>s+c.budget,0);
+        const totalDep=chantiers.reduce((s,c)=>s+c.depenses.reduce((ss,d)=>ss+d.mont,0),0);
+
+        $('dashKpis').innerHTML=[
+          {l:'Total chantiers',v:chantiers.length,s:'Tous statuts',c:'cb'},
+          {l:'En cours',v:ec.length,s:'Actifs',c:'cj'},
+          {l:'Terminés',v:tr.length,s:'Réceptionnés',c:'cv'},
+          {l:'Devis en attente',v:dv.length,s:'À concrétiser',c:'col'},
+          {l:'CA potentiel 2026',v:fmt(bTotal),s:'Tous projets',c:'co'},
+          {l:'Dépenses saisies',v:fmt(totalDep),s:'Tous chantiers',c:'cr'},
+        ].map(k=>'<div class="kpi '+k.c+'"><div class="kl">'+k.l+'</div><div class="kv">'+k.v+'</div><div class="ks">'+k.s+'</div></div>').join('');
+
+        $('dashActifs').innerHTML=ec.length===0?'<div class="empty">Aucun chantier en cours</div>':
+          ec.map(c=>'<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer;" onclick="Chantiers.openDetail('+c.id+')">'
+            +'<div style="overflow:hidden;flex:1;"><div style="font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+utils.esc(c.titre)+'</div>'
+            +'<div style="font-size:10.5px;color:var(--af);">'+utils.esc(c.client)+'</div></div>'
+            +'<div style="text-align:right;flex-shrink:0;margin-left:10px;">'
+            +'<div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:800;color:var(--or);">'+c.avanc+'%</div>'
+            +'<div class="pt" style="width:55px;margin-top:2px;"><div class="pf '+c.statut+'" style="width:'+c.avanc+'%"></div></div>'
+            +'</div></div>').join('');
+
+        const al=this.computeAlertes();
+        const sp=$('alertPill'),dp=$('devisPill'),ep=$('enCoursPill'),tp=$('terminesPill');
+        if(sp)sp.textContent=al.length;if(dp)dp.textContent=dv.length;
+        if(ep)ep.textContent=ec.length;if(tp)tp.textContent=tr.length;
+
+        $('dashAlertesMini').innerHTML=al.length===0?'<div class="empty empty-ok">✓ Aucune alerte</div>':
+          al.slice(0,3).map(a=>'<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);font-size:11.5px;cursor:pointer;" onclick="Chantiers.openDetail('+(a.ref||0)+')">'
+            +'<span style="font-size:15px;">'+a.icon+'</span>'
+            +'<div><div style="font-weight:600;">'+a.titre.split('—')[0].trim()+'</div>'
+            +'<div style="color:var(--af);font-size:10.5px;">'+a.sub+'</div></div></div>').join('')
+          +(al.length>3?'<div style="font-size:11px;color:var(--bc);margin-top:7px;cursor:pointer;" onclick="VilarCore.nav.go(\'alertes\')">Voir toutes ('+al.length+') →</div>':'');
+
+        $('dashBudgets').innerHTML=[...chantiers].sort((a,b)=>b.budget-a.budget).slice(0,7).map(c=>{
+          const maxB=chantiers.reduce((m,x)=>Math.max(m,x.budget),1);
+          return '<div style="margin-bottom:9px;">'
+            +'<div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px;">'
+            +'<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;font-weight:500;">'+utils.esc(c.titre)+'</span>'
+            +'<span style="font-weight:700;color:var(--or);margin-left:8px;white-space:nowrap;">'+fmt(c.budget)+'</span></div>'
+            +'<div class="pt"><div class="pf '+c.statut+'" style="width:'+Math.round(c.budget/maxB*100)+'%"></div></div></div>';
+        }).join('');
+      },
+
+      /* ── ALERTES ── */
+      renderAlertes() {
+        const al=this.computeAlertes();
+        const sorted=[...al].sort((a,b)=>({urgent:0,warning:1,info:2}[a.type]-{urgent:0,warning:1,info:2}[b.type]));
+        $('alertesContent').innerHTML=sorted.length===0
+          ?'<div class="empty empty-ok" style="font-size:14px;padding:40px 0;">✅ Aucune alerte active !</div>'
+          :'<div style="font-size:12px;color:var(--af);margin-bottom:12px;">'+sorted.length+' alerte'+(sorted.length>1?'s':'')+' — <strong style="color:var(--rll);">'+sorted.filter(a=>a.type==='urgent').length+' urgente(s)</strong></div>'
+          +sorted.map(a=>{const onclk=a.ref?'Chantiers.openDetail('+a.ref+')':'';return '<div class="alerte-item '+a.type+'" onclick="'+onclk+'" role="button">'
+            +'<div class="al-icon">'+a.icon+'</div>'
+            +'<div class="al-body"><div class="al-title">'+a.titre+'</div><div class="al-sub">'+a.sub+'</div><div class="al-date">'+a.date+'</div></div>'
+            +'<span class="al-badge '+({'urgent':'ab-u','warning':'ab-w','info':'ab-i'}[a.type])+'">'+({'urgent':'URGENT','warning':'ATTENTION','info':'INFO'}[a.type])+'</span>'
+            +'</div>';}).join('');
+      },
+
+      /* ── PLANNING ÉQUIPES ── */
+      renderPlanningEquipes() {
+        const jours=['Lun 28','Mar 29','Mer 30','Jeu 01','Ven 02'];
+        let wg='<div class="wg wh wn"></div>';
+        jours.forEach(j=>wg+='<div class="wg wh">'+j+'</div>');
+        equipes.forEach(e=>{
+          wg+='<div class="wg wn" style="color:'+e.color+';">'+e.name.split(' ')[0]+'</div>';
+          e.semaine.forEach(s=>{
+            let cls='wf',txt='Libre';
+            if(s==='BUREAU'){cls='wp';txt='Bureau';}
+            else if(s!=='LIBRE'){cls='wa';txt=s;}
+            wg+='<div class="wg '+cls+'" style="font-size:9px;">'+txt+'</div>';
+          });
+        });
+        $('weekGrid').innerHTML=wg;
+
+        $('equipesCards').innerHTML=equipes.map(e=>{
+          const chans=e.chantiers.map(ref=>chantiers.find(c=>c.ref===ref)).filter(Boolean);
+          const occ=e.semaine.filter(s=>s!=='LIBRE').length;
+          const dspTxt=occ===0?'Disponible':occ+'/5 jours';
+          const dspColor=occ===0?'var(--vll)':occ<4?'var(--jn)':'var(--rll)';
+          return '<div class="eq-card"><div class="eq-hdr">'
+            +'<div style="display:flex;align-items:center;gap:10px;">'
+            +'<div style="width:34px;height:34px;border-radius:50%;background:'+e.color+'22;border:2px solid '+e.color+';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:'+e.color+';">'+e.initiales+'</div>'
+            +'<div><div style="font-family:\'Syne\',sans-serif;font-size:13.5px;font-weight:800;color:'+e.color+';">'+utils.esc(e.name)+'</div>'
+            +'<div style="font-size:11px;color:var(--af);">'+utils.esc(e.role)+'</div></div></div>'
+            +'<span style="font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:9px;background:'+dspColor+'18;color:'+dspColor+';border:1px solid '+dspColor+'30;">'+dspTxt+'</span>'
+            +'</div>'
+            +(chans.length===0?'<div style="padding:12px 15px;font-size:12px;color:var(--af);">Aucun chantier affecté</div>':
+              chans.map(c=>'<div style="display:flex;align-items:center;gap:9px;padding:9px 15px;border-top:1px solid var(--bd);">'
+                +'<div style="flex:1;overflow:hidden;"><div style="font-size:11.5px;font-weight:600;">'+c.ref+'</div>'
+                +'<div style="font-size:11px;color:var(--bc);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+utils.esc(c.titre)+'</div></div>'
+                +'<div style="text-align:right;flex-shrink:0;">'
+                +'<div style="font-family:\'Syne\',sans-serif;font-size:14px;font-weight:800;color:var(--or);">'+c.avanc+'%</div>'
+                +'<div class="pt" style="width:50px;margin-top:2px;"><div class="pf '+c.statut+'" style="width:'+c.avanc+'%"></div></div>'
+                +'</div></div>').join(''))
+            +'</div>';
+        }).join('');
+      },
+
+      /* ── CARD ── */
+      _card(c) {
+        const adr=c.adresse?(c.adresse.split(',').slice(1).join(',').trim()||c.adresse):'—';
+        const dep=c.depenses.reduce((s,d)=>s+d.mont,0);
+        const pct=c.budget>0?Math.round(dep/c.budget*100):0;
+        const depAlert=pct>80?'<span style="font-size:9px;color:var(--rll);font-weight:700;margin-left:4px;">⚠'+pct+'%</span>':'';
+        const rge=c.rge==='oui'?'<span style="background:rgba(74,222,128,.15);color:var(--vll);padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;margin-left:3px;">RGE</span>':'';
+        return '<div class="cc" onclick="Chantiers.openDetail('+c.id+')" role="button" tabindex="0">'
+          +'<div class="csb '+c.statut+'"></div>'
+          +'<div class="ct"><div class="ch">'
+          +'<div><div class="cref">'+c.ref+rge+depAlert+'</div><div class="ctit">'+utils.esc(c.titre)+'</div></div>'
+          +'<span class="sbadge '+sc(c.statut)+'">'+sl(c.statut)+'</span>'
+          +'</div>'
+          +'<div class="cmeta">'
+          +'<div class="cm">👤 <strong>'+utils.esc(c.client)+'</strong></div>'
+          +'<div class="cm">📍 '+utils.esc(adr)+'</div>'
+          +'<div class="cm">📅 '+fmtD(c.debut)+'</div>'
+          +'<div class="cm">🏁 '+fmtD(c.fin)+'</div>'
+          +'<div class="cm">🔧 '+utils.esc(c.type||'—')+'</div>'
+          +'<div class="cm">📷 '+c.photos.length+' photo'+(c.photos.length!==1?'s':'')+'</div>'
+          +'</div></div>'
+          +'<div class="pw"><div class="plb"><span>Avancement</span><strong>'+c.avanc+'%</strong></div>'
+          +'<div class="pt"><div class="pf '+c.statut+'" style="width:'+c.avanc+'%"></div></div></div>'
+          +'<div class="cf">'
+          +'<div><div class="cbl">Budget HT</div><div class="cbg">'+fmt(c.budget)+'</div></div>'
+          +'<div style="display:flex;gap:5px;" onclick="event.stopPropagation()">'
+          +'<button class="bg2" onclick="Chantiers.editC('+c.id+')">✎</button>'
+          +'<button class="bd2" onclick="Chantiers.delC('+c.id+')">🗑</button>'
+          +'</div></div></div>';
+      },
+
+      renderListe() {
+        const list=curFilter==='tous'?chantiers:chantiers.filter(c=>c.statut===curFilter);
+        $('chantiersGrid').innerHTML=list.length===0?'<div class="empty">Aucun chantier.</div>':list.map(c=>this._card(c)).join('');
+      },
+      filterC(f,btn) {
+        curFilter=f;
+        utils.qa('.fb').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        this.renderListe();
+      },
+      renderFiltered(statut,gridId) {
+        const el=$(gridId);if(!el)return;
+        const list=chantiers.filter(c=>c.statut===statut);
+        el.innerHTML=list.length===0?'<div class="empty">Aucun "'+sl(statut)+'".</div>':list.map(c=>this._card(c)).join('');
+      },
+
+      /* ── GANTT ── */
+      renderGantt() {
+        let h='<div class="ghead"><div class="gm" style="text-align:left;color:var(--am);">Chantier</div>'+MA.map(m=>'<div class="gm">'+m+'</div>').join('')+'</div>';
+        chantiers.forEach(c=>{
+          h+='<div class="grow"><div class="gname" title="'+c.client+' — '+c.titre+'">'+c.ref.replace('VDS-2026-','#')+' '+c.client.split(' ').pop()+'</div>';
+          for(let m=0;m<12;m++){
+            if(m>=c.dm&&m<=c.fm){
+              const s=m===c.dm,e=m===c.fm;
+              h+='<div class="gcell"><div class="gbar" style="background:'+GANTT_COLS[c.statut]+';border-radius:'+(s?'3px 0 0 3px':'0')+' '+(e?'0 3px 3px 0':'0')+';width:'+(s&&e?'88%':s||e?'94%':'100%')+';left:'+(s?'3%':'0')+';"></div></div>';
+            } else h+='<div class="gcell"></div>';
+          }
+          h+='</div>';
+        });
+        $('ganttGrid').innerHTML=h;
+      },
+
+      /* ── FINANCIER (retourne HTML) ── */
+      _renderFinancier(c) {
+        const totalDep=c.depenses.reduce((s,d)=>s+d.mont,0);
+        const pct=c.budget>0?Math.min(100,(totalDep/c.budget)*100):0;
+        const cls=pct<70?'fin-ok':pct<90?'fin-warn':'fin-over';
+        const reste=c.budget-totalDep;
+        return '<div style="margin-bottom:14px;">'
+          +'<div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:4px;">'
+          +'<span style="color:var(--af);">Dépenses vs Budget HT</span>'
+          +'<strong style="color:'+(pct>90?'var(--rll)':pct>70?'var(--jn)':'var(--vll)')+';">'+Math.round(pct)+'% consommé</strong></div>'
+          +'<div class="fin-track"><div class="fin-fill '+cls+'" style="width:'+pct+'%;"></div></div>'
+          +'<div style="display:flex;justify-content:space-between;font-size:11px;margin-top:5px;">'
+          +'<span style="color:var(--af);">Dépenses : <strong style="color:var(--ac);">'+fmt(totalDep)+'</strong></span>'
+          +'<span style="color:var(--af);">Reste : <strong style="color:'+(reste<0?'var(--rll)':'var(--vll)')+';">'+fmt(reste)+'</strong></span>'
+          +'<span style="color:var(--af);">Budget : <strong style="color:var(--or);">'+fmt(c.budget)+'</strong></span>'
+          +'</div></div>'
+          +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:7px;">'
+          +'<span style="font-size:12px;font-weight:600;color:var(--am);">'+c.depenses.length+' dépense'+(c.depenses.length!==1?'s':'')+'</span>'
+          +'<button class="bo" style="font-size:11px;padding:6px 11px;" onclick="Chantiers.addDepense('+c.id+')">+ Ajouter</button></div>'
+          +'<div id="depList-'+c.id+'">'
+          +(c.depenses.length===0?'<div class="empty">Aucune dépense saisie.</div>':
+            c.depenses.map(d=>'<div class="dep-row">'
+              +'<div class="dep-dot" style="background:'+(CAT_COLORS[d.cat]||'#7A8FA6')+'"></div>'
+              +'<div style="flex:1;"><strong style="font-size:12px;">'+d.cat+'</strong> <span style="color:var(--af);">— '+utils.esc(d.desc)+'</span></div>'
+              +'<div style="font-size:10.5px;color:var(--af);">'+fmtD(d.date)+'</div>'
+              +'<div style="font-weight:700;color:var(--or);white-space:nowrap;">'+fmt(d.mont)+'</div>'
+              +'<button class="bd2" style="padding:3px 7px;font-size:10px;" onclick="Chantiers.delDepense('+c.id+','+d.id+')">✕</button>'
+              +'</div>').join(''))
+          +'</div>';
+      },
+
+      /* ── DÉPENSES ── */
+      addDepense(cid) {
+        const cat=prompt('Catégorie :\n- Matériaux\n- Location\n- Sous-traitance\n- Main d\'œuvre\n- Divers','Matériaux');
+        if(!cat)return;
+        const desc=prompt('Description :','');if(!desc)return;
+        const mont=parseFloat(prompt('Montant HT (€) :','0')||'0');
+        if(isNaN(mont)||mont<=0){toast.show('Montant invalide','err');return;}
+        const c=chantiers.find(x=>x.id===cid);if(!c)return;
+        c.depenses.push({id:++nextDepId,cat,desc,mont,date:new Date().toISOString().slice(0,10)});
+        persistence.mark();this.openDetail(cid);toast.show('Dépense ajoutée ✓','ok');
+      },
+      delDepense(cid,did) {
+        if(!confirm('Supprimer cette dépense ?'))return;
+        const c=chantiers.find(x=>x.id===cid);if(!c)return;
+        c.depenses=c.depenses.filter(d=>d.id!==did);
+        persistence.mark();this.openDetail(cid);
+      },
+
+      /* ── PHOTOS ── */
+      _renderPhotos(c) {
+        const gridHtml=c.photos.map((p,i)=>'<div class="photo-item" onclick="document.getElementById(\'pvImg\').src=\''+p.data+'\';document.getElementById(\'photoViewer\').classList.add(\'open\')">'
+          +'<img src="'+p.data+'" alt="'+(p.caption||'Photo')+'">'
+          +'<button class="photo-del" onclick="event.stopPropagation();Chantiers.delPhoto('+c.id+','+i+')">✕</button>'
+          +(p.caption?'<div class="photo-cap">'+utils.esc(p.caption)+'</div>':'')
+          +'</div>').join('');
+        return '<div class="photo-grid" id="photoGrid-'+c.id+'">'+gridHtml+'</div>'
+          +'<div class="upload-zone" onclick="document.getElementById(\'photoInput-'+c.id+'\').click()">'
+          +'<input type="file" id="photoInput-'+c.id+'" accept="image/*" multiple onchange="Chantiers.handlePhotos('+c.id+',this)">'
+          +'<div style="font-size:22px;">📷</div>'
+          +'<p style="font-size:12px;color:var(--af);margin-top:6px;">Appuyez pour ajouter des photos</p></div>';
+      },
+      handlePhotos(cid,input) {
+        const c=chantiers.find(x=>x.id===cid);if(!c)return;
+        const files=Array.from(input.files);
+        let loaded=0;
+        files.forEach(file=>{
+          const img=new window.Image(),reader=new FileReader();
+          reader.onload=ev=>{
+            img.onload=()=>{
+              const canvas=document.createElement('canvas');
+              const MAX=900;let w=img.width,h=img.height;
+              if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
+              canvas.width=w;canvas.height=h;
+              canvas.getContext('2d').drawImage(img,0,0,w,h);
+              const compressed=canvas.toDataURL('image/jpeg',0.72);
+              c.photos.push({data:compressed,caption:file.name.replace(/\.[^.]+$/,''),date:new Date().toISOString().slice(0,10)});
+              loaded++;
+              if(loaded===files.length){
+                persistence.mark();
+                const pg=$('photoGrid-'+c.id);
+                if(pg)pg.innerHTML=c.photos.map((p,i)=>'<div class="photo-item" onclick="document.getElementById(\'pvImg\').src=\''+p.data+'\';document.getElementById(\'photoViewer\').classList.add(\'open\')">'
+                  +'<img src="'+p.data+'" alt=""><button class="photo-del" onclick="event.stopPropagation();Chantiers.delPhoto('+c.id+','+i+')">✕</button>'
+                  +(p.caption?'<div class="photo-cap">'+utils.esc(p.caption)+'</div>':'')+'</div>').join('');
+                toast.show(files.length+' photo'+(files.length>1?'s':'')+' ajoutée'+(files.length>1?'s':'')+' ✓','ok');
+              }
+            };img.src=ev.target.result;
+          };reader.readAsDataURL(file);
+        });
+        input.value='';
+      },
+      delPhoto(cid,idx) {
+        if(!confirm('Supprimer cette photo ?'))return;
+        const c=chantiers.find(x=>x.id===cid);if(!c)return;
+        c.photos.splice(idx,1);persistence.mark();
+        const pg=$('photoGrid-'+cid);
+        if(pg)pg.innerHTML=c.photos.map((p,i)=>'<div class="photo-item" onclick="document.getElementById(\'pvImg\').src=\''+p.data+'\';document.getElementById(\'photoViewer\').classList.add(\'open\')">'
+          +'<img src="'+p.data+'" alt=""><button class="photo-del" onclick="event.stopPropagation();Chantiers.delPhoto('+cid+','+i+')">✕</button>'
+          +(p.caption?'<div class="photo-cap">'+utils.esc(p.caption)+'</div>':'')+'</div>').join('');
+        toast.show('Photo supprimée','sv');
+      },
+
+      /* ── DÉTAIL ── */
+      openDetail(id) {
+        const c=chantiers.find(x=>x.id===id);if(!c)return;
+        const dep=c.depenses.reduce((s,d)=>s+d.mont,0);
+        const pct=c.budget>0?Math.min(100,Math.round(dep/c.budget*100)):0;
+        const self=this;
+
+        $('detailContent').innerHTML=
+          '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">'
+          +'<div><div style="font-size:9.5px;color:var(--af);text-transform:uppercase;letter-spacing:1px;">'+c.ref+'</div>'
+          +'<h1 style="font-family:\'Syne\',sans-serif;font-size:19px;font-weight:800;margin-top:3px;">'+utils.esc(c.titre)+'</h1>'
+          +'<div style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap;">'
+          +'<span class="sbadge '+sc(c.statut)+'">'+sl(c.statut)+'</span>'
+          +(c.rge==='oui'?'<span style="background:rgba(74,222,128,.15);color:var(--vll);padding:3px 8px;border-radius:18px;font-size:9.5px;font-weight:700;border:1px solid rgba(74,222,128,.2);">✓ RGE</span>':'')
+          +(c.photos.length>0?'<span style="background:rgba(74,123,168,.15);color:var(--bc);padding:3px 8px;border-radius:18px;font-size:9.5px;font-weight:700;border:1px solid rgba(74,123,168,.2);">📷 '+c.photos.length+'</span>':'')
+          +(pct>80?'<span style="background:rgba(248,113,113,.15);color:var(--rll);padding:3px 8px;border-radius:18px;font-size:9.5px;font-weight:700;border:1px solid rgba(248,113,113,.2);">⚠ Budget '+pct+'%</span>':'')
+          +'</div></div>'
+          +'<div style="display:flex;gap:7px;flex-wrap:wrap;">'
+          +'<button class="bou" onclick="Chantiers.editC('+c.id+')">✎ Modifier</button>'
+          +'<button class="bd2" style="padding:7px 11px;" onclick="Chantiers.delC('+c.id+')">🗑</button>'
+          +'</div></div>'
+          +'<div class="tabs">'
+          +'<button class="tab active" onclick="Chantiers.switchDT(\'info\')">📋 Infos</button>'
+          +'<button class="tab" onclick="Chantiers.switchDT(\'financier\')">💰 Financier</button>'
+          +'<button class="tab" onclick="Chantiers.switchDT(\'phases\')">📊 Phases</button>'
+          +'<button class="tab" onclick="Chantiers.switchDT(\'photos\')">📷 Photos ('+c.photos.length+')</button>'
+          +'<button class="tab" onclick="Chantiers.switchDT(\'journal\')">📝 Journal ('+c.logs.length+')</button>'
+          +'</div>'
+          +'<div class="tc active" id="dtc-info">'
+          +'<div class="dg">'
+          +'<div class="sec" style="margin-bottom:0;"><h3>Client & Chantier</h3><table class="dtb">'
+          +'<tr><td>Client</td><td style="font-weight:600;">'+utils.esc(c.client)+'</td></tr>'
+          +'<tr><td>Téléphone</td><td><a href="tel:'+c.tel+'" style="color:var(--bc);">'+(c.tel||'—')+'</a></td></tr>'
+          +'<tr><td>Adresse</td><td>'+utils.esc(c.adresse)+'</td></tr>'
+          +'<tr><td>Type</td><td>'+(c.type||'—')+'</td></tr>'
+          +'<tr><td>Chef chantier</td><td>'+utils.esc(c.chef)+'</td></tr>'
+          +'<tr><td>RGE</td><td>'+(c.rge==='oui'?'<span style="color:var(--vll);">✓ Oui</span>':'Non')+'</td></tr>'
+          +'</table></div>'
+          +'<div class="sec" style="margin-bottom:0;"><h3>Budget & Planning</h3><table class="dtb">'
+          +'<tr><td>Budget HT</td><td style="font-family:\'Syne\',sans-serif;font-weight:800;color:var(--or);font-size:14px;">'+fmt(c.budget)+'</td></tr>'
+          +'<tr><td>TVA (10%)</td><td>'+fmt(c.budget*0.1)+'</td></tr>'
+          +'<tr><td>Budget TTC</td><td style="font-weight:600;">'+fmt(c.budget*1.1)+'</td></tr>'
+          +'<tr><td>Début</td><td>'+fmtD(c.debut)+'</td></tr>'
+          +'<tr><td>Fin prévue</td><td>'+fmtD(c.fin)+'</td></tr>'
+          +'<tr><td>Avancement</td><td>'
+          +'<div style="display:flex;align-items:center;gap:7px;">'
+          +'<div class="pt" style="flex:1;"><div class="pf '+c.statut+'" style="width:'+c.avanc+'%"></div></div>'
+          +'<strong style="color:var(--or);">'+c.avanc+'%</strong></div></td></tr>'
+          +'</table></div></div>'
+          +(c.desc?'<div class="sec"><h3>Description</h3><p style="font-size:12.5px;line-height:1.7;color:var(--am);">'+utils.esc(c.desc)+'</p></div>':'')
+          +'</div>'
+          +'<div class="tc" id="dtc-financier"><div class="sec"><h3>Suivi des dépenses vs budget</h3>'+this._renderFinancier(c)+'</div></div>'
+          +'<div class="tc" id="dtc-phases"><div class="sec"><h3>Phases du chantier</h3>'
+          +c.phases.map(p=>'<div class="pi"><div class="pd '+p.s+'"></div><div class="pn">'+utils.esc(p.n)+'</div><div class="pdt">'+p.d+'</div>'
+            +'<span class="pst '+p.s+'">'+(p.s==='done'?'✓ Fait':p.s==='active'?'● En cours':'À faire')+'</span></div>').join('')
+          +'</div></div>'
+          +'<div class="tc" id="dtc-photos"><div class="sec"><h3>Photos de chantier ('+c.photos.length+')</h3>'+this._renderPhotos(c)+'</div></div>'
+          +'<div class="tc" id="dtc-journal"><div class="sec"><h3>Journal de chantier ('+c.logs.length+' note'+(c.logs.length!==1?'s':'')+')</h3>'
+          +'<div id="logs-'+c.id+'">'
+          +(c.logs.length===0?'<div class="empty">Aucune note. Ajoutez la première ci-dessous.</div>':'')
+          +c.logs.map(l=>'<div class="li"><div class="lav">'+(l.a||'JV').slice(0,2).toUpperCase()+'</div>'
+            +'<div><div class="lm">'+(l.a||'Julio')+' · '+l.d+'</div><div class="lt">'+utils.esc(l.m)+'</div></div></div>').join('')
+          +'</div>'
+          +'<div class="la">'
+          +'<textarea class="fi fi-area" id="newlog-'+c.id+'" placeholder="Note de chantier (avancement, livraison, incident, météo...)"></textarea>'
+          +'<button class="bo" onclick="Chantiers.addLog('+c.id+')" style="height:52px;white-space:nowrap;font-size:11px;">→ Ajouter</button>'
+          +'</div></div></div>';
+
+        nav.go('detail');
+      },
+
+      switchDT(name) {
+        utils.qa('.tc').forEach(c=>c.classList.remove('active'));
+        utils.qa('.tab').forEach(b=>b.classList.remove('active'));
+        $('dtc-'+name)?.classList.add('active');
+        const TABS=['info','financier','phases','photos','journal'];
+        const idx=TABS.indexOf(name);
+        const tabs=utils.qa('.tab');
+        if(idx>=0&&tabs[idx])tabs[idx].classList.add('active');
+      },
+
+      addLog(id) {
+        const ta=$('newlog-'+id);
+        const msg=ta?.value?.trim();
+        if(!msg){toast.show("Écrivez une note avant d'envoyer",'err');return;}
+        const c=chantiers.find(x=>x.id===id);if(!c)return;
+        const ds=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'});
+        c.logs.unshift({d:ds,a:'Julio',m:msg});
+        ta.value='';
+        const el=$('logs-'+id);
+        if(el)el.innerHTML=c.logs.map(l=>'<div class="li"><div class="lav">'+(l.a||'JV').slice(0,2).toUpperCase()+'</div>'
+          +'<div><div class="lm">'+l.a+' · '+l.d+'</div><div class="lt">'+utils.esc(l.m)+'</div></div></div>').join('');
+        persistence.mark();toast.show('Note ajoutée ✓','ok');
+      },
+
+      /* ── MODAL CRUD ── */
+      openModal(defS='devis') {
+        const m=$('modalOv');if(!m)return;
+        $('mTitle').textContent='Nouveau chantier';
+        ['f-titre','f-client','f-tel','f-adresse','f-desc'].forEach(id=>{const el=$(id);if(el)el.value='';});
+        $('f-budget').value='';$('f-avanc').value='0';
+        $('f-statut').value=defS;$('f-rge').value='non';
+        $('f-debut').value='';$('f-fin').value='';
+        if($('f-type'))$('f-type').value='';
+        ['fv-titre','fv-client','fv-budget'].forEach(id=>{const el=$(id);if(el)el.classList.remove('has-err');});
+        m.style.display='flex';
+        this._editId=null;
+      },
+      editC(id) {
+        const c=chantiers.find(x=>x.id===id);if(!c)return;
+        this._editId=id;
+        $('mTitle').textContent='Modifier — '+c.ref;
+        $('f-titre').value=c.titre;$('f-client').value=c.client;$('f-tel').value=c.tel||'';
+        $('f-adresse').value=c.adresse;$('f-budget').value=c.budget;$('f-avanc').value=c.avanc;
+        $('f-statut').value=c.statut;$('f-rge').value=c.rge||'non';
+        $('f-debut').value=c.debut||'';$('f-fin').value=c.fin||'';
+        if($('f-type'))$('f-type').value=c.type||'';
+        if($('f-chef'))$('f-chef').value=c.chef;
+        $('f-desc').value=c.desc||'';
+        ['fv-titre','fv-client','fv-budget'].forEach(id=>{const el=$(id);if(el)el.classList.remove('has-err');});
+        $('modalOv').style.display='flex';
+      },
+      saveChantier() {
+        const titre=($('f-titre').value||'').trim();
+        const client=($('f-client').value||'').trim();
+        const budget=parseFloat($('f-budget').value)||0;
+        const debut=$('f-debut').value,fin=$('f-fin').value;
+        let valid=true;
+        if(!titre){$('fv-titre').classList.add('has-err');valid=false;}
+        if(!client){$('fv-client').classList.add('has-err');valid=false;}
+        if(budget<=0){$('fv-budget').classList.add('has-err');valid=false;}
+        if(debut&&fin&&new Date(fin)<new Date(debut)){toast.show('La date de fin doit être après le début','err');valid=false;}
+        if(!valid){toast.show('Corrigez les champs en rouge','err');return;}
+        const dm=debut?new Date(debut).getMonth():0,fm=fin?new Date(fin).getMonth():11;
+        const data={titre,client,tel:($('f-tel').value||'').trim(),adresse:($('f-adresse').value||'').trim(),
+          budget,avanc:Math.min(100,Math.max(0,parseInt($('f-avanc').value)||0)),
+          statut:$('f-statut').value,rge:$('f-rge').value,debut,fin,
+          type:($('f-type').value||''),chef:$('f-chef')?.value||'Julio (Gérant)',
+          desc:($('f-desc').value||'').trim(),dm,fm};
+        if(this._editId){
+          Object.assign(chantiers.find(x=>x.id===this._editId),data);
+          toast.show('Chantier mis à jour ✓','ok');
+        } else {
+          const num=String(nextId-99).padStart(3,'0');
+          nextId++;
+          chantiers.push({id:nextId-1,ref:'VDS-2026-'+num,photos:[],depenses:[],phases:[],logs:[],equipe:[],...data});
+          toast.show('Chantier créé ✓','ok');
+        }
+        this.closeModal();persistence.mark();this.refreshAll();
+      },
+      delC(id) {
+        const c=chantiers.find(x=>x.id===id);
+        if(!confirm('Supprimer "'+c?.titre+'" ?\n\nCette action est irréversible.'))return;
+        chantiers=chantiers.filter(x=>x.id!==id);
+        persistence.mark();this.refreshAll();toast.show('Chantier supprimé','sv');
+        if($('view-detail')?.classList.contains('active'))nav.back();
+      },
+      closeModal() { $('modalOv').style.display='none'; },
+
+      /* ── PARAMÈTRES ── */
+      renderParamEquipes() {
+        const ep=$('equipesParam');if(!ep)return;
+        ep.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;">'
+          +equipes.map((e,i)=>'<div style="background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:9px;padding:12px;">'
+            +'<div style="font-size:10px;color:'+e.color+';font-weight:700;text-transform:uppercase;margin-bottom:8px;">'+e.initiales+' — '+utils.esc(e.name)+'</div>'
+            +'<div class="f1" style="margin-bottom:8px;"><label class="fl">Nom</label><input class="fi" id="ep-name-'+i+'" value="'+utils.esc(e.name)+'" style="font-size:12px;"></div>'
+            +'<div class="f1"><label class="fl">Rôle</label><input class="fi" id="ep-role-'+i+'" value="'+utils.esc(e.role)+'" style="font-size:12px;"></div>'
+            +'</div>').join('')+'</div>';
+        const ds=$('dataStats');
+        if(ds)ds.innerHTML=chantiers.length+' chantier(s) · '+chantiers.reduce((s,c)=>s+c.photos.length,0)+' photo(s)';
+      },
+      saveEquipes() {
+        equipes.forEach((e,i)=>{const n=$('ep-name-'+i),r=$('ep-role-'+i);if(n)e.name=n.value.trim();if(r)e.role=r.value.trim();});
+        persistence.mark();persistence.save(false);toast.show('Équipes enregistrées ✓','ok');
+      },
+
+      /* ── EXPORT/IMPORT ── */
+      exportCSV() {
+        let csv='\uFEFF';
+        csv+='Réf,Titre,Client,Statut,Budget HT,Dépenses,Avancement,Début,Fin,Chef,RGE,Photos\n';
+        chantiers.forEach(c=>{const dep=c.depenses.reduce((s,d)=>s+d.mont,0);
+          csv+='"'+c.ref+'","'+c.titre+'","'+c.client+'","'+c.statut+'",'+c.budget+','+dep+','+c.avanc+'%,"'+c.debut+'","'+c.fin+'","'+c.chef+'","'+c.rge+'",'+c.photos.length+'\n';});
+        const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+        const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+        a.download='VilarDS_Chantiers_'+new Date().toISOString().slice(0,10)+'.csv';
+        a.click();URL.revokeObjectURL(a.href);toast.show('CSV exporté ✓','ok');
+      },
+      handleImport(input) {
+        const file=input.files[0];if(!file)return;
+        if(!confirm('Importer "'+file.name+'" ?\nLes données actuelles seront remplacées.')){input.value='';return;}
+        const reader=new FileReader();
+        reader.onload=e=>{try{const d=JSON.parse(e.target.result);this.applyData(d);persistence.save(false);this.refreshAll();toast.show('Import réussi ✓','ok');}catch{toast.show('Fichier JSON invalide','err');}input.value='';};
+        reader.readAsText(file);
+      },
+      clearAll() {
+        if(!confirm('Effacer TOUS les chantiers ? Action irréversible !'))return;
+        if(!confirm('Dernière confirmation ?'))return;
+        chantiers=DEFAULT_CHANTIERS.map(c=>({...c,depenses:[...c.depenses],photos:[...c.photos],phases:[...c.phases],logs:[...c.logs]}));
+        equipes=DEFAULT_EQUIPES.map(e=>({...e,semaine:[...e.semaine],chantiers:[...e.chantiers]}));
+        nextId=100;nextDepId=200;persistence.save(false);this.refreshAll();toast.show('Données réinitialisées','sv');
+      },
+
+      /* ── REFRESH ── */
+      refreshAll() {
+        this.renderDashboard();
+        const av=nav.current;
+        if(av==='liste')this.renderListe();
+        if(av==='planning')this.renderGantt();
+        if(av==='planning-eq')this.renderPlanningEquipes();
+        if(av==='alertes')this.renderAlertes();
+        if(av==='devis')this.renderFiltered('devis','devisGrid');
+        if(av==='en-cours')this.renderFiltered('en-cours','enCoursGrid');
+        if(av==='termines')this.renderFiltered('termine','terminesGrid');
+        if(av==='parametres')this.renderParamEquipes();
+      },
+
+      _editId: null,
+    };
+
+    /* ════════════════════════════════════════════════════════════════
+       NAVIGATION
+    ════════════════════════════════════════════════════════════════ */
+    nav.register('dashboard',   () => Chantiers.renderDashboard());
+    nav.register('alertes',     () => Chantiers.renderAlertes());
+    nav.register('planning-eq', () => Chantiers.renderPlanningEquipes());
+    nav.register('liste',       () => Chantiers.renderListe());
+    nav.register('planning',    () => Chantiers.renderGantt());
+    nav.register('devis',       () => Chantiers.renderFiltered('devis',    'devisGrid'));
+    nav.register('en-cours',    () => Chantiers.renderFiltered('en-cours', 'enCoursGrid'));
+    nav.register('termines',    () => Chantiers.renderFiltered('termine',  'terminesGrid'));
+    nav.register('detail',      () => {});
+    nav.register('parametres',  () => Chantiers.renderParamEquipes());
+
+    /* ════════════════════════════════════════════════════════════════
+       MONTAGE UI
+    ════════════════════════════════════════════════════════════════ */
+    VilarUI.mountModule({
+      sidebar: {
+        moduleName:    'Chantiers & Projets 2026',
+        moduleVersion: 'v2.0 — IndexedDB + PWA',
+        navItems: [
+          { type:'section', label:'Tableau de bord' },
+          { id:'dashboard',   icon:'⊞', label:"Vue d'ensemble" },
+          { id:'alertes',     icon:'🔔', label:'Alertes', pill:0, pillId:'alertPill',    pillClass:'pr' },
+          { type:'section', label:'Chantiers' },
+          { id:'liste',       icon:'🏗', label:'Tous les chantiers' },
+          { id:'devis',       icon:'🟣', label:'Devis en attente',  pill:0, pillId:'devisPill',   pillClass:'por' },
+          { id:'en-cours',    icon:'🟡', label:'En cours',          pill:0, pillId:'enCoursPill', pillClass:'pj'  },
+          { id:'termines',    icon:'🟢', label:'Terminés',          pill:0, pillId:'terminesPill',pillClass:'pv'  },
+          { type:'section', label:'Outils' },
+          { id:'planning',    icon:'📅', label:'Gantt 2026' },
+          { id:'planning-eq', icon:'👷', label:'Planning équipes' },
+          { id:'parametres',  icon:'⚙', label:'Paramètres' },
+        ],
+        dataActions: [
+          { label:'↓ JSON',    onClick:"VilarCore.io.exportJSON(Chantiers.getData(),'Chantiers')" },
+          { label:'↓ CSV',     onClick:"Chantiers.exportCSV()" },
+          { label:'↑ Importer', onClick:"document.getElementById('importFile').click()" },
+          { label:'🖨 Imprimer', onClick:'window.print()' },
+        ],
+      },
+      header: {
+        title: 'Chantiers & Projets',
+        year:  '2026',
+        actions: [
+          { label:'💾',        class:'sec', onClick:"VilarCore.persistence.save(false)" },
+          { label:'+ Chantier',            onClick:"Chantiers.openModal()" },
+        ],
+        avatar: 'JV',
+      },
+      bannerModuleName: 'Chantiers',
+    });
+
+    window.Chantiers = Chantiers;
+
+    /* ════════════════════════════════════════════════════════════════
+       INITIALISATION
+    ════════════════════════════════════════════════════════════════ */
+    async function initApp() {
+      try {
+        let saved = await db.getModule(MODULE_KEY);
+        if (!saved) {
+          saved = await db.getExternal(LEGACY_DB, LEGACY_STORE, LEGACY_KEY);
+          if (saved) toast.show('Migration Chantiers v1 → v2 ✓', 'info', 3000);
+        }
+        if (saved) {
+          Chantiers.applyData(saved);
+          VilarCore.saveIndicator.update(false, saved.savedAt ?? null);
+          toast.show('Chantiers restaurés ✓', 'ok', 2000);
+        }
+      } catch(e) { console.error('[Chantiers] Chargement:', e); }
+
+      persistence.init(
+        async () => {
+          const p = { ...Chantiers.getData(), savedAt:new Date().toISOString(), _version:'2.0' };
+          await db.setModule(MODULE_KEY, p);
+          await bus.publish(MODULE_KEY, Chantiers.getSnapshot());
+        },
+        (isDirty, ls) => VilarCore.saveIndicator.update(isDirty, ls),
+      );
+
+      Chantiers.renderDashboard();
+      const nd = utils.$('nav-dashboard');
+      if (nd) nd.classList.add('active');
+
+      pwa.register();
+      safeIcons();
+
+      setTimeout(() => {
+        utils.qa('.kpi').forEach((el,i) => {
+          el.style.opacity='0'; el.style.transform='translateY(9px)';
+          setTimeout(() => { el.style.transition='all .28s ease'; el.style.opacity='1'; el.style.transform='translateY(0)'; }, i*42+60);
+        });
+      }, 80);
+
+      // Ctrl+S + Escape
+      document.addEventListener('keydown', e => {
+        if ((e.ctrlKey||e.metaKey)&&e.key==='s') { e.preventDefault(); persistence.save(false); }
+        if (e.key==='Escape') { Chantiers.closeModal(); $('photoViewer')?.classList.remove('open'); }
+      });
+
+      console.log('%c🏗 VilarDS Chantiers v2.0 — PWA Ready', 'color:#C8A84B;font-size:12px;font-weight:bold;');
+    }
+
+    if (document.readyState==='loading') { document.addEventListener('DOMContentLoaded', initApp); }
+    else { initApp(); }
+
+  })();
+  </script>
+</body>
+</html>

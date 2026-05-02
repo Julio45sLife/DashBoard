@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1C2B3A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Vilar DS — Facturation 2026</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="vilar-core.js"></script>
+  <script src="ui-components.js"></script>
+  <style>
+    /* ── Statuts badges ── */
+    .s-br { background:rgba(122,143,166,.12); color:var(--am);  border:1px solid rgba(122,143,166,.2); }
+    .s-en { background:rgba(74,123,168,.15);  color:var(--bc);  border:1px solid rgba(74,123,168,.2);  }
+    .s-ac { background:rgba(74,222,128,.12);  color:var(--vll); border:1px solid rgba(74,222,128,.2);  }
+    .s-re { background:rgba(248,113,113,.12); color:var(--rll); border:1px solid rgba(248,113,113,.2); }
+    .s-fa { background:rgba(200,168,75,.15);  color:var(--or);  border:1px solid rgba(200,168,75,.2);  }
+    .s-pa { background:rgba(26,107,58,.15);   color:var(--vll); border:1px solid rgba(26,107,58,.2);   }
+    .s-rt { background:rgba(139,26,26,.15);   color:var(--rll); border:1px solid rgba(139,26,26,.2);   }
+    .s-pt { background:rgba(234,179,8,.15);   color:var(--jn);  border:1px solid rgba(234,179,8,.2);   }
+
+    /* ── Grille et cards docs ── */
+    .dgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:13px; }
+    .dc    { background:var(--bg); border:1px solid var(--bd); border-radius:var(--radius); overflow:hidden; cursor:pointer; transition:var(--trans); }
+    .dc:hover { transform:translateY(-2px); border-color:rgba(200,168,75,.28); box-shadow:var(--shadow-lg); }
+    .dc-top.devis   { height:3px; background:linear-gradient(90deg,#7C3AED,#A78BFA); }
+    .dc-top.facture { height:3px; background:linear-gradient(90deg,var(--bc),var(--or)); }
+    .dc-top.avoir   { height:3px; background:rgba(122,143,166,.5); }
+    .dc-body { padding:13px 14px 10px; }
+    .dc-ref  { font-size:9.5px; color:var(--af); font-weight:600; text-transform:uppercase; letter-spacing:1px; margin-bottom:2px; }
+    .dc-titre{ font-family:'Syne',sans-serif; font-size:13px; font-weight:800; line-height:1.3; margin-bottom:7px; }
+    .dc-meta { display:grid; grid-template-columns:1fr 1fr; gap:3px; }
+    .dm      { font-size:11px; color:var(--af); }
+    .dc-foot { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-top:1px solid var(--bd); }
+    .dc-montl{ font-size:9px; color:var(--af); text-transform:uppercase; letter-spacing:1px; }
+    .dc-mont { font-family:'Syne',sans-serif; font-size:15px; font-weight:800; color:var(--or); }
+
+    /* ── Filter bar ── */
+    .fbar { display:flex; gap:5px; margin-bottom:13px; flex-wrap:wrap; }
+    .fb   { padding:6px 12px; border-radius:7px; font-size:11.5px; cursor:pointer; border:1px solid var(--bd); color:var(--af); background:transparent; transition:var(--trans); font-family:'DM Sans',sans-serif; }
+    .fb:hover  { color:var(--ac); }
+    .fb.active { background:var(--ba); color:white; border-color:transparent; }
+
+    /* ── Impayés ── */
+    .impaye-item { background:var(--bg); border:1px solid rgba(248,113,113,.25); border-radius:var(--radius); padding:16px; margin-bottom:13px; border-left:4px solid var(--rll); }
+
+    /* ── Timeline historique ── */
+    .tl       { padding:8px 0; }
+    .tl-item  { display:flex; align-items:flex-start; gap:10px; padding:6px 0; }
+    .tl-dot   { width:10px; height:10px; border-radius:50%; flex-shrink:0; margin-top:3px; }
+    .tl-dot.b { background:var(--bc); }
+    .tl-dot.g { background:var(--vll); }
+    .tl-dot.r { background:var(--rll); }
+    .tl-dot.o { background:var(--or); }
+    .tl-date  { font-size:10px; color:var(--af); width:90px; flex-shrink:0; }
+    .tl-txt   { font-size:12px; flex:1; }
+
+    /* ── Lignes modal ── */
+    .lignes-wrap  { border:1px solid var(--bd); border-radius:9px; overflow:hidden; }
+    .ligne-hdr    { display:grid; grid-template-columns:3fr 1fr 1.2fr 1.2fr 28px; gap:4px; padding:7px 11px; background:rgba(0,0,0,.2); font-size:9.5px; color:var(--af); font-weight:600; text-transform:uppercase; letter-spacing:.8px; }
+    .ligne-row    { display:grid; grid-template-columns:3fr 1fr 1.2fr 1.2fr 28px; gap:4px; padding:6px 11px; border-top:1px solid rgba(184,200,216,.06); align-items:center; }
+    .ligne-row input { background:rgba(255,255,255,.05); border:1px solid rgba(184,200,216,.1); border-radius:5px; padding:5px 7px; color:var(--ac); font-size:12px; font-family:'DM Sans',sans-serif; width:100%; }
+    .ligne-row input:focus { border-color:var(--bc); outline:none; }
+    .ligne-totaux { display:flex; justify-content:flex-end; gap:16px; padding:8px 12px; font-size:12px; color:var(--af); background:rgba(200,168,75,.04); border-top:1px solid var(--bd); }
+    .ligne-totaux strong { color:var(--or); }
+    .add-ligne { font-size:12px; color:var(--bc); cursor:pointer; transition:color .2s; }
+    .add-ligne:hover { color:var(--or); }
+    .msec-title { font-size:9.5px; text-transform:uppercase; letter-spacing:1.5px; color:var(--or); font-weight:700; grid-column:1/-1; padding-top:4px; border-top:1px solid rgba(200,168,75,.12); margin-top:4px; }
+    .val-msg  { font-size:10px; color:var(--rll); display:none; margin-top:2px; }
+    .has-err .val-msg { display:block; }
+    .has-err .fi { border-color:rgba(248,113,113,.5); }
+
+    /* ── PDF Preview (rendu blanc pour html2canvas) ── */
+    #pdfPreviewWrap { background:#fff; color:#1C2B3A; padding:0; border-radius:var(--radius); overflow:hidden; }
+    .pdf-rge    { background:#e8f5e9; border:1px solid #66bb6a; color:#2e7d32; font-size:11px; font-weight:600; text-align:center; padding:7px 12px; }
+    .pdf-band   { background:#1C2B3A; color:white; padding:18px 24px; display:flex; justify-content:space-between; align-items:flex-start; }
+    .pdf-logo   { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; color:#C8A84B; letter-spacing:1px; }
+    .pdf-doctype{ font-family:'Syne',sans-serif; font-size:16px; font-weight:800; color:#C8A84B; text-align:right; }
+    .pdf-docref { font-size:12px; color:rgba(255,255,255,.7); text-align:right; }
+    .pdf-body   { padding:20px 24px; }
+    .pdf-parties{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+    .pdf-part-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:#7A8FA6; font-weight:600; margin-bottom:4px; }
+    .pdf-part-name { font-family:'Syne',sans-serif; font-size:14px; font-weight:800; color:#1C2B3A; margin-bottom:3px; }
+    .pdf-part-detail{ font-size:11px; color:#555; line-height:1.6; }
+    .pdf-meta   { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:8px; background:#f8f9fa; padding:10px 14px; border-radius:7px; margin-bottom:14px; }
+    .pdf-meta-label{ font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#7A8FA6; }
+    .pdf-meta-val  { font-size:12px; font-weight:600; color:#1C2B3A; margin-top:2px; }
+    .pdf-obj    { font-size:14px; font-weight:700; color:#1C2B3A; padding:10px 0; border-bottom:2px solid #C8A84B; margin-bottom:12px; }
+    .pdf-table  { width:100%; border-collapse:collapse; font-size:12px; margin-bottom:12px; }
+    .pdf-table thead tr{ background:#1C2B3A; color:white; }
+    .pdf-table th { padding:8px 10px; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
+    .pdf-table td { padding:7px 10px; border-bottom:1px solid #eee; color:#1C2B3A; }
+    .pdf-table tr:nth-child(even) td { background:#f8f9fa; }
+    .pdf-totaux { margin-left:auto; width:260px; border:1px solid #eee; border-radius:7px; overflow:hidden; }
+    .pdf-tot-row{ display:flex; justify-content:space-between; padding:7px 14px; border-bottom:1px solid #eee; font-size:12px; }
+    .pdf-tot-row.total { background:#1C2B3A; color:white; font-weight:700; }
+    .pdf-tot-label { color:#555; }
+    .pdf-tot-val   { font-weight:700; color:#1C2B3A; }
+    .pdf-tot-row.total .pdf-tot-label,
+    .pdf-tot-row.total .pdf-tot-val { color:white; }
+    .pdf-validity{ font-size:11px; color:#666; padding:10px 0; font-style:italic; }
+    .pdf-mentions{ font-size:10.5px; color:#555; line-height:1.7; padding:8px 10px; background:#f8f9fa; border-radius:5px; margin-top:8px; }
+    .pdf-rib    { margin-top:14px; background:#EDF7ED; border:1px solid #81C784; border-radius:7px; padding:12px 14px; }
+    .pdf-sign-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:20px; }
+    .pdf-sign-box { border:1px solid #ddd; border-radius:7px; padding:12px; }
+    .pdf-sign-label{ font-size:10px; text-transform:uppercase; letter-spacing:1px; font-weight:700; color:#1C2B3A; margin-bottom:6px; }
+    .pdf-sign-line { height:40px; border-bottom:1px solid #ccc; margin:8px 0; }
+    .pdf-sign-sub  { font-size:9.5px; color:#888; }
+    .pdf-footer-band{ background:#1C2B3A; color:rgba(255,255,255,.55); font-size:10px; padding:8px 24px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; }
+
+    /* ── PDF actions bar ── */
+    .pdf-actions { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+    .bpdf { background:rgba(74,123,168,.12); border:1px solid rgba(74,123,168,.25); color:var(--bc); padding:7px 13px; border-radius:var(--radius-sm); font-size:12px; cursor:pointer; font-family:'DM Sans',sans-serif; }
+
+    /* ── PDF Overlay spinner ── */
+    #pdfOverlay { position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:500; display:none; align-items:center; justify-content:center; flex-direction:column; gap:12px; }
+    #pdfOverlay.open { display:flex; }
+    .pdf-spinner { width:40px; height:40px; border:3px solid rgba(200,168,75,.3); border-top-color:var(--or); border-radius:50%; animation:spin .8s linear infinite; }
+    #pdfMsg { color:var(--or); font-size:13px; font-weight:600; }
+
+    /* ── Paramètres grille ── */
+    .params-grid { display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+
+    @media (max-width:768px) {
+      .dgrid { grid-template-columns:1fr; }
+      .dc-meta { grid-template-columns:1fr; }
+      .pdf-parties { grid-template-columns:1fr; }
+      .pdf-sign-grid { grid-template-columns:1fr; }
+      .params-grid { grid-template-columns:1fr; }
+      .ligne-hdr, .ligne-row { grid-template-columns:2fr 1fr 1fr 1fr 28px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="sb-mount"></div>
+  <div id="hdr-mount"></div>
+  <div id="banner-mount"></div>
+  <div id="modal-mount"></div>
+
+  <!-- PDF Overlay -->
+  <div id="pdfOverlay">
+    <div class="pdf-spinner"></div>
+    <div id="pdfMsg">Génération du PDF en cours...</div>
+  </div>
+
+  <!-- Import JSON caché -->
+  <input type="file" id="importFile" accept=".json" style="display:none" onchange="Fact.handleImport(this)">
+
+  <main id="main">
+    <!-- DASHBOARD -->
+    <div class="view active" id="view-dashboard">
+      <div style="margin-bottom:16px;">
+        <h1 style="font-family:'Syne',sans-serif;font-size:21px;font-weight:800;">Facturation <span style="color:var(--or);">2026</span></h1>
+        <p style="color:var(--af);font-size:12px;margin-top:2px;">Devis · Factures · Suivi règlements — SARL Vilar DS</p>
+      </div>
+      <div class="kg" id="dashKpis"></div>
+      <div class="dual">
+        <div class="sec" style="margin-bottom:0;"><h3>📋 Derniers devis</h3><div id="dashDevis"></div></div>
+        <div class="sec" style="margin-bottom:0;"><h3>🧾 Dernières factures</h3><div id="dashFactures"></div></div>
+      </div>
+      <div class="sec"><h3>⚠ Impayés & relances</h3><div id="dashImpaye"></div></div>
+    </div>
+
+    <!-- DEVIS -->
+    <div class="view" id="view-devis">
+      <div class="sh"><div class="st">📋 Devis</div><button class="bo" onclick="Fact.openModal('devis')">+ Nouveau devis</button></div>
+      <div class="fbar" id="fbar-devis">
+        <button class="fb active" onclick="Fact.filterD('devis','tous',this)">Tous</button>
+        <button class="fb" onclick="Fact.filterD('devis','brouillon',this)">Brouillon</button>
+        <button class="fb" onclick="Fact.filterD('devis','envoye',this)">Envoyé</button>
+        <button class="fb" onclick="Fact.filterD('devis','accepte',this)">Accepté</button>
+        <button class="fb" onclick="Fact.filterD('devis','refuse',this)">Refusé</button>
+        <button class="fb" onclick="Fact.filterD('devis','facture',this)">Facturé</button>
+      </div>
+      <div class="dgrid" id="devisGrid"></div>
+    </div>
+
+    <!-- FACTURES -->
+    <div class="view" id="view-factures">
+      <div class="sh"><div class="st">🧾 Factures</div><button class="bo" onclick="Fact.openModal('facture')">+ Nouvelle facture</button></div>
+      <div class="fbar" id="fbar-facture">
+        <button class="fb active" onclick="Fact.filterD('facture','tous',this)">Toutes</button>
+        <button class="fb" onclick="Fact.filterD('facture','brouillon',this)">Brouillon</button>
+        <button class="fb" onclick="Fact.filterD('facture','envoye',this)">Envoyée</button>
+        <button class="fb" onclick="Fact.filterD('facture','paye',this)">Payée</button>
+        <button class="fb" onclick="Fact.filterD('facture','partiel',this)">Partiel</button>
+        <button class="fb" onclick="Fact.filterD('facture','retard',this)">Retard</button>
+      </div>
+      <div class="dgrid" id="facturesGrid"></div>
+    </div>
+
+    <!-- AVOIRS -->
+    <div class="view" id="view-avoirs">
+      <div class="sh"><div class="st">↩ Avoirs</div><button class="bo" onclick="Fact.openModal('avoir')">+ Nouvel avoir</button></div>
+      <div class="dgrid" id="avoirsGrid"></div>
+    </div>
+
+    <!-- IMPAYÉS -->
+    <div class="view" id="view-impaye">
+      <div class="sh"><div class="st">⚠ Impayés & Relances</div></div>
+      <div id="impayeContent"></div>
+    </div>
+
+    <!-- ARCHIVE -->
+    <div class="view" id="view-archive">
+      <div class="sh"><div class="st">📁 Archives — Documents payés</div></div>
+      <div class="dgrid" id="archiveGrid"></div>
+    </div>
+
+    <!-- PARAMÈTRES -->
+    <div class="view" id="view-parametres">
+      <div style="margin-bottom:16px;">
+        <h1 style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;">⚙ Paramètres Société</h1>
+        <p style="color:var(--af);font-size:12px;margin-top:2px;">Injectés automatiquement dans tous vos documents</p>
+      </div>
+      <div class="sec"><h3>Informations légales</h3><div class="params-grid" id="paramForm"></div>
+        <div style="margin-top:13px;display:flex;gap:8px;">
+          <button class="bo" onclick="Fact.saveParams()">💾 Enregistrer</button>
+          <button class="bg2" onclick="Fact.resetParams()">↺ Réinitialiser</button>
+        </div>
+      </div>
+      <div class="sec"><h3>Mentions légales par défaut</h3>
+        <textarea class="fi fi-area" id="defaultMentions" style="width:100%;min-height:88px;"></textarea>
+        <div style="margin-top:9px;"><button class="bo" onclick="Fact.saveMentions()">💾 Enregistrer</button></div>
+      </div>
+      <div class="sec"><h3>Conditions par défaut</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:11px;">
+          <div class="f1"><label class="fl">Délai paiement (j)</label><input class="fi" id="p-delai" type="number" value="30"></div>
+          <div class="f1"><label class="fl">Validité devis (j)</label><input class="fi" id="p-validite" type="number" value="30"></div>
+          <div class="f1"><label class="fl">TVA défaut</label><select class="fi" id="p-tva"><option value="20">20%</option><option value="10" selected>10%</option><option value="5.5">5,5%</option></select></div>
+          <div class="f1"><label class="fl">Acompte défaut (%)</label><input class="fi" id="p-acompte" type="number" value="30"></div>
+        </div>
+        <div style="margin-top:11px;"><button class="bo" onclick="Fact.saveConditions()">💾 Enregistrer</button></div>
+      </div>
+      <div class="sec"><h3>Gestion des données</h3>
+        <div style="display:flex;gap:9px;flex-wrap:wrap;">
+          <button class="bo" onclick="VilarCore.io.exportJSON(Fact.getData(),'Facturation')">↓ Export JSON</button>
+          <button class="bou" onclick="document.getElementById('importFile').click()">↑ Importer JSON</button>
+          <button class="bou" onclick="Fact.exportCSV()">↓ CSV</button>
+          <button class="bd2" onclick="Fact.clearAll()">🗑 Réinitialiser tout</button>
+        </div>
+        <div id="dataStats" style="margin-top:10px;font-size:11.5px;color:var(--af);"></div>
+      </div>
+    </div>
+
+    <!-- DÉTAIL -->
+    <div class="view" id="view-detail">
+      <div class="back" onclick="VilarCore.nav.back()">← Retour</div>
+      <div id="detailContent"></div>
+    </div>
+  </main>
+
+  <!-- MODAL DOCUMENT (form statique, contenu dynamique) -->
+  <div id="factModalOv" onclick="if(event.target===this)Fact.closeModal()" style="position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:13px;overflow-y:auto;">
+    <div class="mdl">
+      <div class="mh">
+        <div>
+          <div style="font-size:9px;color:var(--af);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Vilar DS · Nouveau document</div>
+          <h2 id="mTitle">Nouveau devis</h2>
+        </div>
+        <div class="mx" onclick="Fact.closeModal()">✕</div>
+      </div>
+      <div class="mb">
+        <div class="fg">
+          <div class="msec-title">Document</div>
+          <div class="f1"><label class="fl">Type</label>
+            <select class="fi" id="f-type" onchange="Fact.updateModalType()">
+              <option value="devis">📋 Devis</option>
+              <option value="facture">🧾 Facture</option>
+              <option value="avoir">↩ Avoir</option>
+            </select>
+          </div>
+          <div class="f1"><label class="fl">Statut</label><select class="fi" id="f-statut"></select></div>
+          <div class="f1"><label class="fl">Date</label><input class="fi" id="f-date" type="date"></div>
+          <div class="f1"><label class="fl">Validité / Échéance</label><input class="fi" id="f-echeance" type="date"></div>
+          <div class="f1 full" id="fv-objet">
+            <label class="fl">Objet *</label>
+            <input class="fi" id="f-objet" type="text" placeholder="Ex: Extension R+1 — Olivet" oninput="this.closest('.f1').classList.remove('has-err')">
+            <span class="val-msg">Champ obligatoire</span>
+          </div>
+          <div class="f1"><label class="fl">Chantier associé</label><select class="fi" id="f-chantier"></select></div>
+          <div class="f1"><label class="fl">Réf. interne</label><input class="fi" id="f-ref" type="text" readonly style="opacity:.55;"></div>
+          <div class="msec-title">Client</div>
+          <div class="f1" id="fv-client">
+            <label class="fl">Nom / Société *</label>
+            <input class="fi" id="f-client" type="text" oninput="this.closest('.f1').classList.remove('has-err')">
+            <span class="val-msg">Champ obligatoire</span>
+          </div>
+          <div class="f1"><label class="fl">Téléphone</label><input class="fi" id="f-tel" type="tel" placeholder="06 XX XX XX XX"></div>
+          <div class="f1 full"><label class="fl">Adresse</label><input class="fi" id="f-adresse" type="text"></div>
+          <div class="f1"><label class="fl">Email</label><input class="fi" id="f-email" type="email"></div>
+          <div class="f1"><label class="fl">TVA globale</label>
+            <select class="fi" id="f-tva" onchange="Fact.updateLignesTVA()">
+              <option value="20">TVA 20%</option><option value="10" selected>TVA 10%</option>
+              <option value="5.5">TVA 5,5%</option><option value="0">TVA 0% (auto-liq.)</option>
+            </select>
+          </div>
+          <div class="f1"><label class="fl">Acompte (%)</label><input class="fi" id="f-acompte" type="number" min="0" max="100" value="30"></div>
+          <div class="msec-title">Prestations</div>
+          <div class="f1 full">
+            <div class="lignes-wrap">
+              <div class="ligne-hdr"><span>Désignation</span><span>Qté</span><span>P.U. HT</span><span>Total HT</span><span></span></div>
+              <div id="lignesBody"></div>
+              <div style="padding:7px 11px;"><span class="add-ligne" onclick="Fact.addLigne()">+ Ajouter une ligne</span></div>
+              <div class="ligne-totaux">
+                <span>HT : <strong id="lTotHT">0,00 €</strong></span>
+                <span>TVA : <strong id="lTotTVA">0,00 €</strong></span>
+                <span>TTC : <strong id="lTotTTC" style="color:var(--vll);">0,00 €</strong></span>
+              </div>
+            </div>
+          </div>
+          <div class="msec-title">Conditions</div>
+          <div class="f1 full"><label class="fl">Conditions de paiement</label>
+            <select class="fi" id="f-conditions">
+              <option>30% acompte — solde à réception</option>
+              <option>50% acompte — 50% à réception</option>
+              <option>Paiement à 30 jours fin de mois</option>
+              <option>Paiement à réception de facture</option>
+              <option>Paiement par virement bancaire</option>
+            </select>
+          </div>
+          <div class="f1 full"><label class="fl">Notes / Mentions spécifiques</label>
+            <textarea class="fi fi-area" id="f-notes" placeholder="TVA réduite art.279-0 bis CGI — Attestation fournie par le client..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="mf">
+        <button class="bg2" onclick="Fact.closeModal()">Annuler</button>
+        <button class="bo" onclick="Fact.saveDoc()">💾 Enregistrer</button>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    'use strict';
+
+    const { db, bus, persistence, toast, nav, io, utils, safeIcons, pwa, TODAY } = VilarCore;
+    const $ = utils.$;
+    const fmtD = utils.fmtD;
+
+    /* ── Helpers locaux ── */
+    const fmt  = n => Number(n||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+    const slS  = s => ({brouillon:'Brouillon',envoye:'Envoyé',accepte:'Accepté',refuse:'Refusé',facture:'Facturé',paye:'Payé',retard:'Retard',partiel:'Partiel'}[s]||s);
+    const scS  = s => ({brouillon:'s-br',envoye:'s-en',accepte:'s-ac',refuse:'s-re',facture:'s-fa',paye:'s-pa',retard:'s-rt',partiel:'s-pt'}[s]||'');
+    const tlS  = t => ({devis:'📋 Devis',facture:'🧾 Facture',avoir:'↩ Avoir'}[t]||t);
+    const genRef = type => { const p={devis:'DEV',facture:'FAC',avoir:'AVO'}[type]||'DOC'; const n=docs.filter(d=>d.type===type).length+1; return p+'-2026-'+String(n).padStart(3,'0'); };
+    const totalDoc = d => { const ht=d.lignes.reduce((s,l)=>s+l.qte*l.pu,0); const tva=d.lignes.reduce((s,l)=>s+l.qte*l.pu*(l.tva||0)/100,0); return {ht,tva,ttc:ht+tva}; };
+
+    const MODULE_KEY   = 'facturation';
+    const LEGACY_DB    = 'VilarDS_Fact_DB';
+    const LEGACY_STORE = 'factdata';
+    const LEGACY_KEY   = 'facturation';
+
+    const STATUT_MAP = {
+      devis:   ['<option value="brouillon">Brouillon</option>','<option value="envoye">Envoyé</option>','<option value="accepte">Accepté</option>','<option value="refuse">Refusé</option>'],
+      facture: ['<option value="brouillon">Brouillon</option>','<option value="envoye">Envoyée</option>','<option value="paye">Payée</option>','<option value="partiel">Partiel</option>','<option value="retard">Retard</option>'],
+      avoir:   ['<option value="brouillon">Brouillon</option>','<option value="envoye">Émis</option>'],
+    };
+
+    /* ════════════════════════════════════════════════════════════════
+       DONNÉES PAR DÉFAUT
+    ════════════════════════════════════════════════════════════════ */
+    const DEFAULT_PARAMS = {
+      nom:'SARL Vilar DS',adresse:'Semoy (45400), Loiret',
+      tel:'06 XX XX XX XX',email:'vilards@gmail.com',
+      siren:'495 126 344',siret:'495 126 344 00014',
+      tva_intra:'FR XX 495126344',ape:'4120A',
+      rge:'RGE QualiSol N° XXXXXX',
+      assurance:'AXA Pro — Police N° XXXXXX',
+      iban:'FR76 XXXX XXXX XXXX XXXX XXXX XXX',bic:'XXXXXXXX',
+    };
+    const DEFAULT_MENTIONS = 'Pénalités de retard : 3× le taux légal. Indemnité forfaitaire 40€. TVA réduite art.279-0 bis CGI. Garantie décennale souscrite.';
+    const DEFAULT_DOCS = [
+      {id:1,ref:'DEV-2026-001',type:'devis',statut:'accepte',date:'2026-01-15',echeance:'2026-02-15',objet:'Dalle béton garage + carrelage',client:'Mme Sophie Laurent',tel:'07 89 01 23 45',adresse:'9 rue des Acacias, 45800 Combleux',email:'',chantier:'VDS-2026-009',acompte:30,conditions:'30% acompte — solde à réception',notes:'TVA 10% — logement > 2 ans.',lignes:[{desc:'Terrassement & préparation',qte:1,pu:800,tva:10},{desc:'Béton + ferraillage + dalle 50m²',qte:1,pu:2400,tva:10},{desc:'Carrelage grès cérame 60x60',qte:50,pu:38,tva:10},{desc:'Joints & finitions',qte:1,pu:350,tva:10}],historique:[{d:'15 Jan 2026',t:'b',txt:'Devis créé et envoyé'},{d:'20 Jan 2026',t:'g',txt:'Devis accepté — acompte reçu'}]},
+      {id:2,ref:'DEV-2026-002',type:'devis',statut:'accepte',date:'2026-01-20',echeance:'2026-02-20',objet:'Isolation combles perdus RGE — Laine de verre 30cm',client:'M. Roger Blanchard',tel:'06 34 56 78 90',adresse:'18 route de Sully, 45150 Jargeau',email:'',chantier:'VDS-2026-010',acompte:30,conditions:'30% acompte — solde à réception',notes:'TVA 5,5% — isolation thermique résidentielle. Dossier MaPrimeRénov.',lignes:[{desc:'Soufflage laine de verre 30cm — 90m²',qte:90,pu:18,tva:5.5},{desc:'Calfeutrement & préparation',qte:1,pu:280,tva:5.5},{desc:'Attestation RGE + dossier MPR',qte:1,pu:0,tva:0}],historique:[{d:'20 Jan 2026',t:'g',txt:'Devis accepté'},{d:'22 Jan 2026',t:'g',txt:'Chantier terminé — Facture payée'}]},
+      {id:3,ref:'DEV-2026-003',type:'devis',statut:'envoye',date:'2026-03-10',echeance:'2026-04-10',objet:'Extension R+1 — Maçonnerie & gros œuvre',client:'M. et Mme Fontaine',tel:'06 12 34 56 78',adresse:'12 rue des Lilas, 45160 Olivet',email:'fontaine@email.fr',chantier:'VDS-2026-001',acompte:30,conditions:'30% acompte — solde à réception',notes:'TVA 20% — construction neuve.',lignes:[{desc:'Installation chantier & sécurisation',qte:1,pu:1200,tva:20},{desc:'Fondations béton armé 45m²',qte:45,pu:180,tva:20},{desc:'Maçonnerie blocs béton R+0+R+1',qte:1,pu:12000,tva:20},{desc:'Charpente bois fermettes industrielles',qte:1,pu:8500,tva:20},{desc:'Couverture tuiles + isolation',qte:1,pu:6800,tva:20},{desc:'Menuiseries extérieures PVC',qte:8,pu:950,tva:20}],historique:[{d:'10 Mar 2026',t:'b',txt:'Devis établi et envoyé'},{d:'15 Mar 2026',t:'b',txt:'Relance téléphonique'}]},
+      {id:4,ref:'DEV-2026-004',type:'devis',statut:'envoye',date:'2026-04-05',echeance:'2026-05-05',objet:'Ravalement façade + isolation combles RGE',client:'M. et Mme Delorme',tel:'07 12 34 56 78',adresse:'15 impasse des Peupliers, 45800 Saint-Jean-de-Braye',email:'',chantier:'VDS-2026-006',acompte:30,conditions:'30% acompte — solde à réception',notes:'TVA mixte : 10% ravalement, 5,5% isolation RGE.',lignes:[{desc:'Ravalement façade enduit minéral — 140m²',qte:140,pu:55,tva:10},{desc:'Isolation combles perdus laine 30cm — 90m²',qte:90,pu:28,tva:5.5},{desc:'Échafaudage 3 semaines',qte:1,pu:1800,tva:20},{desc:'Dossiers CEE + MPR',qte:1,pu:350,tva:20}],historique:[{d:'05 Avr 2026',t:'b',txt:'Devis envoyé'}]},
+      {id:5,ref:'DEV-2026-005',type:'devis',statut:'brouillon',date:'2026-04-15',echeance:'2026-05-15',objet:'Mur de clôture + portail motorisé aluminium',client:'M. Arnaud Tessier',tel:'06 78 90 12 34',adresse:'5 chemin du Pressoir, 45400 Semoy',email:'',chantier:'VDS-2026-007',acompte:30,conditions:'Paiement à réception',notes:'TVA 20%.',lignes:[{desc:'Fondations + dés béton portail',qte:1,pu:900,tva:20},{desc:'Maçonnerie mur parpaing 35ml H1.80m enduit',qte:35,pu:120,tva:20},{desc:'Portail alu 4m motorisé + télécommande',qte:1,pu:2800,tva:20},{desc:'Piliers + finitions',qte:2,pu:350,tva:20}],historique:[]},
+      {id:6,ref:'FAC-2026-001',type:'facture',statut:'paye',date:'2026-02-06',echeance:'2026-03-06',objet:'Dalle béton garage + carrelage — Solde 70%',client:'Mme Sophie Laurent',tel:'07 89 01 23 45',adresse:'9 rue des Acacias, 45800 Combleux',email:'',chantier:'VDS-2026-009',acompte:0,conditions:'Paiement reçu le 10/02/2026',notes:'Solde suite à DEV-2026-001.',lignes:[{desc:'Dalle béton + carrelage — Solde 70%',qte:1,pu:4480,tva:10}],historique:[{d:'06 Fév 2026',t:'b',txt:'Facture émise'},{d:'10 Fév 2026',t:'g',txt:'Paiement reçu — virement'}]},
+      {id:7,ref:'FAC-2026-002',type:'facture',statut:'paye',date:'2026-01-23',echeance:'2026-02-23',objet:'Isolation combles RGE — Solde 70%',client:'M. Roger Blanchard',tel:'06 34 56 78 90',adresse:'18 route de Sully, 45150 Jargeau',email:'',chantier:'VDS-2026-010',acompte:0,conditions:'Paiement reçu le 28/01/2026',notes:'Attestation RGE remise.',lignes:[{desc:'Isolation combles + attestation RGE — Solde',qte:1,pu:2660,tva:5.5}],historique:[{d:'23 Jan 2026',t:'b',txt:'Facture émise'},{d:'28 Jan 2026',t:'g',txt:'Paiement reçu — chèque encaissé'}]},
+      {id:8,ref:'FAC-2026-003',type:'facture',statut:'retard',date:'2026-03-01',echeance:'2026-03-31',objet:'ITE Laine de roche — Situation N°1 (40%)',client:'M. Bernard Chavot',tel:'07 65 43 21 09',adresse:'8 allée des Chênes, 45430 Chécy',email:'',chantier:'VDS-2026-002',acompte:0,conditions:'Paiement à 30 jours fin de mois',notes:'Situation de travaux N°1.',lignes:[{desc:'ITE Laine de roche — Situation 40%',qte:1,pu:7400,tva:10}],historique:[{d:'01 Mar 2026',t:'b',txt:'Facture situation N°1 émise'},{d:'01 Avr 2026',t:'r',txt:'Paiement en retard — relance envoyée'},{d:'15 Avr 2026',t:'r',txt:'2ème relance — appel tél.'}]},
+      {id:9,ref:'FAC-2026-004',type:'facture',statut:'envoye',date:'2026-04-10',echeance:'2026-05-10',objet:'Rénovation SdB + WC — Acompte 30%',client:'Mme Claire Aubert',tel:'06 98 76 54 32',adresse:'34 rue du Moulin, 45430 Mardié',email:'',chantier:'VDS-2026-003',acompte:0,conditions:'Paiement à réception',notes:'Acompte 30% sur devis accepté.',lignes:[{desc:'Acompte 30% — Rénovation SdB complète',qte:1,pu:2940,tva:10}],historique:[{d:'10 Avr 2026',t:'b',txt:'Facture acompte émise et envoyée'}]},
+    ];
+
+    /* ════════════════════════════════════════════════════════════════
+       STATE
+    ════════════════════════════════════════════════════════════════ */
+    let docs       = DEFAULT_DOCS.map(d => ({...d, lignes:[...d.lignes], historique:[...d.historique]}));
+    let params     = {...DEFAULT_PARAMS};
+    let mentions   = DEFAULT_MENTIONS;
+    let lignesData = [];
+    let nextDocId  = 100;
+    let curFilter  = {devis:'tous', facture:'tous'};
+    let chantiersRef = [];
+
+    /* ════════════════════════════════════════════════════════════════
+       PERSISTANCE
+    ════════════════════════════════════════════════════════════════ */
+    const Fact = {
+      getData() { return {docs, params, mentions, nextDocId}; },
+      applyData(s) {
+        if (s.docs)      docs      = s.docs;
+        if (s.params)    params    = {...DEFAULT_PARAMS, ...s.params};
+        if (s.mentions)  mentions  = s.mentions;
+        if (s.nextDocId) nextDocId = s.nextDocId;
+      },
+      getSnapshot() {
+        const factures = docs.filter(d => d.type === 'facture');
+        return {
+          docs: docs.map(d => ({id:d.id,ref:d.ref,type:d.type,statut:d.statut,client:d.client,objet:d.objet,ttc:totalDoc(d).ttc})),
+          caTotal: factures.reduce((s,d) => s + totalDoc(d).ht, 0),
+          impayesCount: docs.filter(d => d.type==='facture' && (d.statut==='retard'||d.statut==='envoye')).length,
+        };
+      },
+      validateImport: d => d && Array.isArray(d.docs),
+
+      /* ── Dashboard ── */
+      renderDashboard() {
+        const devisL = docs.filter(d => d.type === 'devis');
+        const factL  = docs.filter(d => d.type === 'facture');
+        const caFact = factL.reduce((s,d) => s + totalDoc(d).ht, 0);
+        const caPaye = factL.filter(d => d.statut==='paye').reduce((s,d) => s + totalDoc(d).ht, 0);
+        const devisTot = devisL.reduce((s,d) => s + totalDoc(d).ttc, 0);
+        const impaye   = factL.filter(d => d.statut==='retard' || d.statut==='envoye');
+        const impayeTot = impaye.reduce((s,d) => s + totalDoc(d).ttc, 0);
+        const tauxConv = devisL.length > 0 ? Math.round(devisL.filter(d => d.statut==='accepte').length / devisL.length * 100) : 0;
+
+        $('dashKpis').innerHTML = [
+          {l:'CA facturé 2026', v:fmt(caFact),   s:'Total HT facturé',     c:'co'},
+          {l:'CA encaissé',     v:fmt(caPaye),   s:'Factures payées',      c:'cv'},
+          {l:'Impayés',         v:fmt(impayeTot),s:impaye.length+' facture(s)', c:'cr'},
+          {l:'Devis envoyés',   v:devisL.filter(d=>d.statut==='envoye').length, s:'En attente réponse', c:'cj'},
+          {l:'Taux conversion', v:tauxConv+'%',  s:'Devis acceptés/total', c:'cb'},
+          {l:'Volume devis',    v:fmt(devisTot), s:'TTC devis actifs',     c:'col'},
+        ].map(k => '<div class="kpi '+k.c+'"><div class="kl">'+k.l+'</div><div class="kv">'+k.v+'</div><div class="ks">'+k.s+'</div></div>').join('');
+
+        const sp=$('devisPill'),fp=$('facturesPill'),ap=$('avoirsPill'),ip=$('impayePill');
+        if(sp)sp.textContent=devisL.length;if(fp)fp.textContent=factL.length;
+        if(ap)ap.textContent=docs.filter(d=>d.type==='avoir').length;if(ip)ip.textContent=impaye.length;
+
+        const mkRow = (d,showEch) => {
+          const t = totalDoc(d);
+          return '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer;font-size:12px;" onclick="Fact.openDetail('+d.id+')">'
+            +'<div style="overflow:hidden;flex:1;">'
+            +'<div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+utils.esc(d.objet)+'</div>'
+            +'<div style="font-size:10.5px;color:var(--af);">'+utils.esc(d.client)+' · '+(showEch?'Éch.'+fmtD(d.echeance):fmtD(d.date))+'</div>'
+            +'</div>'
+            +'<div style="text-align:right;flex-shrink:0;margin-left:8px;">'
+            +'<div style="font-weight:700;color:var(--or);font-family:\'Syne\',sans-serif;">'+fmt(t.ttc)+'</div>'
+            +'<span class="sbadge '+scS(d.statut)+'" style="font-size:9px;">'+slS(d.statut)+'</span>'
+            +'</div></div>';
+        };
+        $('dashDevis').innerHTML    = devisL.slice(-4).reverse().map(d => mkRow(d, false)).join('') || '<div class="empty">Aucun devis.</div>';
+        $('dashFactures').innerHTML = factL.slice(-4).reverse().map(d => mkRow(d, true)).join('') || '<div class="empty">Aucune facture.</div>';
+
+        if (!impaye.length) {
+          $('dashImpaye').innerHTML = '<div class="empty empty-ok">✅ Aucun impayé — tout est à jour.</div>';
+        } else {
+          $('dashImpaye').innerHTML = impaye.map(d => {
+            const t = totalDoc(d);
+            const j = d.echeance ? Math.ceil((TODAY - new Date(d.echeance)) / 864e5) : 0;
+            return '<div style="display:flex;align-items:center;gap:11px;padding:10px;background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.15);border-radius:8px;margin-bottom:8px;cursor:pointer;" onclick="Fact.openDetail('+d.id+')">'
+              +'<div style="font-size:18px;">⚠</div>'
+              +'<div style="flex:1;overflow:hidden;">'
+              +'<div style="font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+d.ref+' — '+utils.esc(d.objet)+'</div>'
+              +'<div style="font-size:11px;color:var(--af);">'+utils.esc(d.client)+' · Éch.'+fmtD(d.echeance)+(j>0?' <span style="color:var(--rll);font-weight:700;">+'+j+'j</span>':'')+'</div>'
+              +'</div>'
+              +'<div style="text-align:right;flex-shrink:0;">'
+              +'<div style="font-family:\'Syne\',sans-serif;font-weight:800;font-size:15px;color:var(--rll);">'+fmt(t.ttc)+'</div>'
+              +'<button class="bo" style="font-size:10px;padding:4px 9px;margin-top:4px;" onclick="event.stopPropagation();Fact.relancer('+d.id+')">✉ Relancer</button>'
+              +'</div></div>';
+          }).join('');
+        }
+      },
+
+      /* ── Card document ── */
+      _docCard(d) {
+        const t = totalDoc(d);
+        const isRet = d.statut === 'retard';
+        return '<div class="dc" onclick="Fact.openDetail('+d.id+')">'
+          +'<div class="dc-top '+d.type+'"></div>'
+          +'<div class="dc-body">'
+          +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:7px;margin-bottom:9px;">'
+          +'<div><div class="dc-ref">'+({'devis':'📋','facture':'🧾','avoir':'↩'}[d.type]||'📄')+' '+d.ref+'</div>'
+          +'<div class="dc-titre">'+utils.esc(d.objet)+'</div></div>'
+          +'<span class="sbadge '+scS(d.statut)+'">'+slS(d.statut)+'</span>'
+          +'</div>'
+          +'<div class="dc-meta">'
+          +'<div class="dm">👤 <strong>'+utils.esc(d.client)+'</strong></div>'
+          +'<div class="dm">📅 '+fmtD(d.date)+'</div>'
+          +'<div class="dm">🏁 '+fmtD(d.echeance)+'</div>'
+          +(d.chantier?'<div class="dm">🏗 <strong>'+utils.esc(d.chantier)+'</strong></div>':'<div></div>')
+          +'</div></div>'
+          +'<div class="dc-foot">'
+          +'<div><div class="dc-montl">Total TTC</div><div class="dc-mont" '+(isRet?'style="color:var(--rll);"':'')+'>'+fmt(t.ttc)+'</div></div>'
+          +'<div style="display:flex;gap:5px;" onclick="event.stopPropagation()">'
+          +'<button class="bou" style="font-size:11px;padding:5px 10px;" onclick="Fact.openDetail('+d.id+')">👁</button>'
+          +'<button class="bg2" onclick="Fact.editDoc('+d.id+')">✎</button>'
+          +'<button class="bd2" onclick="Fact.deleteDoc('+d.id+')">🗑</button>'
+          +'</div></div></div>';
+      },
+
+      renderGrid(type, gridId, statut) {
+        const el = $(gridId); if (!el) return;
+        let list = docs.filter(d => d.type === type);
+        if (statut && statut !== 'tous') list = list.filter(d => d.statut === statut);
+        el.innerHTML = list.length === 0 ? '<div class="empty">Aucun document.</div>' : list.map(d => this._docCard(d)).join('');
+      },
+      filterD(type, statut, btn) {
+        curFilter[type] = statut;
+        btn.closest('.fbar').querySelectorAll('.fb').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.renderGrid(type, type==='devis'?'devisGrid':'facturesGrid', statut);
+      },
+
+      /* ── Impayés ── */
+      renderImpaye() {
+        const im = docs.filter(d => d.type==='facture' && (d.statut==='retard'||d.statut==='envoye'));
+        if (!im.length) { $('impayeContent').innerHTML = '<div class="empty empty-ok" style="font-size:14px;padding:40px 0;">✅ Aucun impayé !</div>'; return; }
+        $('impayeContent').innerHTML = im.map(d => {
+          const t = totalDoc(d);
+          const j = d.echeance ? Math.ceil((TODAY - new Date(d.echeance)) / 864e5) : 0;
+          return '<div class="impaye-item">'
+            +'<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">'
+            +'<div>'
+            +'<div style="font-size:9.5px;color:var(--af);text-transform:uppercase;letter-spacing:1px;">'+d.ref+'</div>'
+            +'<div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:800;margin-top:2px;">'+utils.esc(d.objet)+'</div>'
+            +'<div style="font-size:11.5px;color:var(--af);margin-top:3px;">'+utils.esc(d.client)+' · Éch. '+fmtD(d.echeance)+(j>0?' <span style="color:var(--rll);font-weight:700;">+'+j+' jours de retard</span>':'')+'</div>'
+            +'</div>'
+            +'<div style="text-align:right;">'
+            +'<div style="font-family:\'Syne\',sans-serif;font-size:21px;font-weight:800;color:var(--rll);">'+fmt(t.ttc)+'</div>'
+            +'<div style="font-size:10.5px;color:var(--af);">TVA : '+fmt(t.tva)+'</div>'
+            +'</div></div>'
+            +'<div style="display:flex;gap:8px;margin-top:11px;flex-wrap:wrap;">'
+            +'<button class="bo" onclick="Fact.relancer('+d.id+')">✉ Relancer</button>'
+            +'<button class="bv" onclick="Fact.marquerPaye('+d.id+')">✓ Marquer payé</button>'
+            +'<button class="bou" onclick="Fact.openDetail('+d.id+')">👁 Voir</button>'
+            +'</div></div>';
+        }).join('');
+      },
+
+      /* ── Détail ── */
+      openDetail(id) {
+        const d = docs.find(x => x.id === id); if (!d) return;
+        const t = totalDoc(d);
+        const isDevis = d.type === 'devis', isPaye = d.statut === 'paye';
+        const acompteAmt = t.ttc * d.acompte / 100, solde = t.ttc - acompteAmt;
+        const hasRGE = d.notes && /rge|maprimer|cee/i.test(d.notes);
+
+        // Construire les blocs conditionnels hors template pour éviter les backticks imbriqués
+        const rgeBlock   = hasRGE ? '<div class="pdf-rge">✓ Entreprise RGE certifiée — Travaux éligibles aux aides MaPrimeRénov\' et CEE</div>' : '';
+        const paidStamp  = isPaye ? '<div style="margin-top:8px;"><span style="background:rgba(74,222,128,.2);border:1px solid rgba(74,222,128,.4);border-radius:5px;padding:4px 10px;color:#4ADE80;font-size:11px;font-weight:700;">✓ PAYÉ</span></div>' : '';
+        const acompteRows = isDevis && d.acompte > 0
+          ? '<div class="pdf-tot-row"><span class="pdf-tot-label" style="color:#C8A84B;">Acompte à la commande ('+d.acompte+'%)</span><span class="pdf-tot-val" style="color:#C8A84B;">'+fmt(acompteAmt)+'</span></div>'
+            +'<div class="pdf-tot-row"><span class="pdf-tot-label">Solde à réception</span><span class="pdf-tot-val">'+fmt(solde)+'</span></div>' : '';
+        const validBlock  = isDevis ? '<div class="pdf-validity">⏳ Ce devis est valable 30 jours à compter du '+fmtD(d.date)+'.</div>' : '';
+        const notesBlock  = d.notes ? '<div class="pdf-mentions"><strong>Notes & mentions :</strong><br>'+utils.esc(d.notes)+'</div>' : '';
+        const ribBlock    = !isDevis ? '<div class="pdf-rib"><div style="font-size:11.5px;color:#555;margin-bottom:5px;"><strong>Règlement par virement :</strong></div><div style="font-size:12px;color:#1C2B3A;"><strong>IBAN :</strong> '+params.iban+'<br><strong>BIC :</strong> '+params.bic+'<br><strong>Référence :</strong> '+d.ref+'</div></div>' : '';
+        const signBlock   = isDevis ? '<div class="pdf-sign-grid"><div class="pdf-sign-box"><div class="pdf-sign-label">BON POUR ACCORD</div><div style="font-size:11px;color:#555;">Signature précédée de "Lu et approuvé"</div><div class="pdf-sign-line"></div><div class="pdf-sign-sub">Date & Signature client</div></div><div class="pdf-sign-box"><div class="pdf-sign-label">POUR VILAR DS</div><div style="font-size:11px;color:#555;">Julio Vilar — Gérant</div><div class="pdf-sign-line"></div><div class="pdf-sign-sub">Signature + cachet</div></div></div>' : '';
+        const histoBlock  = d.historique && d.historique.length
+          ? '<div class="sec" style="margin-top:14px;"><h3>Historique du document</h3><div class="tl">'+d.historique.map(h => '<div class="tl-item"><div class="tl-dot '+h.t+'"></div><div class="tl-date">'+h.d+'</div><div class="tl-txt">'+utils.esc(h.txt)+'</div></div>').join('')+'</div></div>' : '';
+        const chantierRow = d.chantier ? '<div class="pdf-meta-item"><div class="pdf-meta-label">Chantier</div><div class="pdf-meta-val">'+d.chantier+'</div></div>' : '';
+
+        const lignesRows = d.lignes.map(l =>
+          '<tr><td>'+utils.esc(l.desc)+'</td><td style="text-align:center;">'+l.qte+'</td><td style="text-align:right;">'+fmt(l.pu)+'</td><td style="text-align:center;">'+l.tva+'%</td><td style="text-align:right;font-weight:600;">'+fmt(l.qte*l.pu)+'</td></tr>'
+        ).join('');
+
+        $('detailContent').innerHTML =
+          '<div class="pdf-actions">'
+          +'<button class="bo" onclick="Fact.downloadPDF('+d.id+')">⬇ Télécharger PDF</button>'
+          +'<button class="bpdf" onclick="window.print()">🖨 Imprimer</button>'
+          +'<button class="bou" onclick="Fact.editDoc('+d.id+')">✎ Modifier</button>'
+          +(isDevis&&d.statut!=='facture'?'<button class="bv" onclick="Fact.convertirFacture('+d.id+')">🧾 → Facture</button>':'')
+          +(d.statut==='envoye'?'<button class="bo" style="background:linear-gradient(135deg,#1A6B3A,#2E8B57);color:white;" onclick="Fact.marquerPaye('+d.id+')">✓ Payé</button>':'')
+          +(d.statut==='envoye'||d.statut==='retard'?'<button class="bo" style="background:linear-gradient(135deg,#8B1A1A,#C0392B);color:white;" onclick="Fact.relancer('+d.id+')">✉ Relancer</button>':'')
+          +'<button class="bd2" style="padding:8px 12px;" onclick="Fact.deleteDoc('+d.id+')">🗑</button>'
+          +'</div>'
+          +'<div id="pdfPreviewWrap">'
+          + rgeBlock
+          +'<div class="pdf-band">'
+          +'<div><div class="pdf-logo">VILAR DS</div>'
+          +'<div style="font-size:11px;color:rgba(255,255,255,.65);margin-top:5px;line-height:1.7;">'+utils.esc(params.adresse)+'<br>Tél : '+params.tel+'<br>'+params.email+'<br>SIREN : '+params.siren+'</div></div>'
+          +'<div><div class="pdf-doctype">'+(tlS(d.type).replace('📋 ','').replace('🧾 ','').replace('↩ ','').toUpperCase())+(isPaye?' ✓':'')+'</div>'
+          +'<div class="pdf-docref">'+d.ref+'</div>'
+          +paidStamp
+          +'</div></div>'
+          +'<div class="pdf-body">'
+          +'<div class="pdf-parties">'
+          +'<div><div class="pdf-part-label">Émetteur</div><div class="pdf-part-name">SARL Vilar DS</div>'
+          +'<div class="pdf-part-detail">'+utils.esc(params.adresse)+'<br>Tél : '+params.tel+' · '+params.email+'<br>SIREN : '+params.siren+' · TVA : '+params.tva_intra+'<br>'+utils.esc(params.rge)+'</div></div>'
+          +'<div><div class="pdf-part-label">Client / Chantier</div><div class="pdf-part-name">'+utils.esc(d.client)+'</div>'
+          +'<div class="pdf-part-detail">'+utils.esc(d.adresse||'—')+(d.tel?'<br>Tél : '+d.tel:'')+(d.email?'<br>'+d.email:'')+(d.chantier?'<br>Réf. chantier : '+d.chantier:'')+'</div></div>'
+          +'</div>'
+          +'<div class="pdf-meta">'
+          +'<div class="pdf-meta-item"><div class="pdf-meta-label">Date</div><div class="pdf-meta-val">'+fmtD(d.date)+'</div></div>'
+          +'<div class="pdf-meta-item"><div class="pdf-meta-label">'+(isDevis?'Validité':'Échéance')+'</div><div class="pdf-meta-val">'+fmtD(d.echeance)+'</div></div>'
+          +chantierRow
+          +'<div class="pdf-meta-item"><div class="pdf-meta-label">Conditions</div><div class="pdf-meta-val" style="font-size:11px;">'+utils.esc(d.conditions||'—')+'</div></div>'
+          +'</div>'
+          +'<div class="pdf-obj">Objet : '+utils.esc(d.objet)+'</div>'
+          +'<table class="pdf-table">'
+          +'<thead><tr><th style="width:50%;">Désignation</th><th style="width:10%;text-align:center;">Qté</th><th style="width:15%;text-align:right;">P.U. HT</th><th style="width:10%;text-align:center;">TVA</th><th style="width:15%;text-align:right;">Total HT</th></tr></thead>'
+          +'<tbody>'+lignesRows+'</tbody>'
+          +'</table>'
+          +'<div class="pdf-totaux">'
+          +'<div class="pdf-tot-row"><span class="pdf-tot-label">Total HT</span><span class="pdf-tot-val">'+fmt(t.ht)+'</span></div>'
+          +'<div class="pdf-tot-row"><span class="pdf-tot-label">TVA</span><span class="pdf-tot-val">'+fmt(t.tva)+'</span></div>'
+          +'<div class="pdf-tot-row total"><span class="pdf-tot-label" style="font-weight:700;font-size:13px;">TOTAL TTC</span><span class="pdf-tot-val">'+fmt(t.ttc)+'</span></div>'
+          +acompteRows
+          +'</div>'
+          +validBlock+notesBlock
+          +'<div class="pdf-mentions">'+utils.esc(mentions)+'</div>'
+          +ribBlock+signBlock
+          +'</div>'
+          +'<div class="pdf-footer-band">'
+          +'<span>SARL Vilar DS · SIREN '+params.siren+' · '+params.ape+'</span>'
+          +'<span>Assurance : '+utils.esc(params.assurance)+'</span>'
+          +'<span>'+d.ref+' · '+fmtD(d.date)+'</span>'
+          +'</div></div>'
+          +histoBlock;
+
+        nav.go('detail');
+      },
+
+      /* ── PDF jsPDF + html2canvas ── */
+      async downloadPDF(id) {
+        const d = docs.find(x => x.id === id); if (!d) return;
+        const el = $('pdfPreviewWrap'); if (!el) return;
+        const ov = $('pdfOverlay'), msg = $('pdfMsg');
+        ov.classList.add('open');
+        msg.textContent = 'Capture du document...';
+        toast.show('Génération PDF en cours...', 'sv', 4000);
+        try {
+          const actions = document.querySelector('.pdf-actions');
+          if (actions) actions.style.display = 'none';
+          await new Promise(r => setTimeout(r, 200));
+          msg.textContent = 'Rendu haute résolution...';
+          const canvas = await html2canvas(el, {scale:2, useCORS:true, logging:false, backgroundColor:'#ffffff', windowWidth:820});
+          msg.textContent = 'Création du PDF...';
+          const {jsPDF} = window.jspdf;
+          const pdf = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+          const imgW = 210;
+          const imgH = canvas.height * imgW / canvas.width;
+          const pages = Math.ceil(imgH / 297);
+          for (let p = 0; p < pages; p++) {
+            if (p > 0) pdf.addPage();
+            const pc = document.createElement('canvas');
+            pc.width = canvas.width; pc.height = canvas.height / pages;
+            pc.getContext('2d').drawImage(canvas, 0, -p * (canvas.height / pages));
+            pdf.addImage(pc.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, imgW, 297);
+          }
+          pdf.save(d.ref+'_'+d.client.replace(/\s+/g,'_').slice(0,20)+'_'+new Date().toISOString().slice(0,10)+'.pdf');
+          if (actions) actions.style.display = '';
+          toast.show('PDF "'+d.ref+'" téléchargé ✓', 'ok');
+        } catch (err) {
+          console.error('PDF error:', err);
+          toast.show('Erreur PDF — essayez "Imprimer"', 'err');
+        } finally {
+          ov.classList.remove('open');
+        }
+      },
+
+      /* ── Actions ── */
+      convertirFacture(id) {
+        if (!confirm('Convertir ce devis en facture ?')) return;
+        const d = docs.find(x => x.id === id); if (!d) return;
+        const newRef = genRef('facture');
+        const fin = new Date(); fin.setDate(fin.getDate() + 30);
+        const today = new Date().toLocaleDateString('fr-FR', {day:'2-digit',month:'short',year:'numeric'});
+        docs.push({...JSON.parse(JSON.stringify(d)), id:++nextDocId, type:'facture', statut:'envoye', ref:newRef,
+          date:new Date().toISOString().slice(0,10), echeance:fin.toISOString().slice(0,10),
+          historique:[{d:today,t:'b',txt:'Facture créée depuis '+d.ref},{d:today,t:'o',txt:'Envoyée au client'}]});
+        d.statut = 'facture';
+        if (!d.historique) d.historique = [];
+        d.historique.push({d:today, t:'o', txt:'Converti en facture '+newRef});
+        persistence.mark(); toast.show('Facture '+newRef+' créée ✓', 'ok'); this.refreshAll();
+      },
+      marquerPaye(id) {
+        const d = docs.find(x => x.id === id); if (!d) return;
+        d.statut = 'paye';
+        const today = new Date().toLocaleDateString('fr-FR', {day:'2-digit',month:'short',year:'numeric'});
+        if (!d.historique) d.historique = [];
+        d.historique.push({d:today, t:'g', txt:'Paiement reçu — marqué payé'});
+        persistence.mark(); toast.show('Facture marquée payée ✓', 'ok'); this.refreshAll();
+        if ($('view-detail')?.classList.contains('active')) this.openDetail(id);
+      },
+      relancer(id) {
+        const d = docs.find(x => x.id === id); if (!d) return;
+        const t = totalDoc(d);
+        if (d.email) {
+          const s = encodeURIComponent('Relance — '+d.ref+' — '+d.objet);
+          const b = encodeURIComponent('Bonjour,\n\nNous vous contactons concernant notre document '+d.ref+' du '+fmtD(d.date)+' d\'un montant de '+fmt(t.ttc)+', dont le règlement n\'a pas encore été réceptionné.\n\nCordialement,\nVilar DS — '+params.tel);
+          window.location.href = 'mailto:'+d.email+'?subject='+s+'&body='+b;
+        } else {
+          alert('Relance '+d.ref+'\nClient : '+d.client+'\nMontant : '+fmt(t.ttc)+'\nÉchéance : '+fmtD(d.echeance)+'\nTél. : '+(d.tel||'—'));
+        }
+        const today = new Date().toLocaleDateString('fr-FR', {day:'2-digit',month:'short',year:'numeric'});
+        if (!d.historique) d.historique = [];
+        d.historique.push({d:today, t:'r', txt:'Relance envoyée'});
+        d.statut = 'retard';
+        persistence.mark(); toast.show('Relance préparée', 'ok'); this.refreshAll();
+      },
+      deleteDoc(id) {
+        const d = docs.find(x => x.id === id);
+        if (!confirm('Supprimer "'+d?.ref+'" — "'+d?.objet+'" ?\n\nIrréversible.')) return;
+        docs = docs.filter(x => x.id !== id);
+        persistence.mark(); this.refreshAll(); toast.show('Document supprimé', 'sv');
+        if ($('view-detail')?.classList.contains('active')) nav.back();
+      },
+
+      /* ── Lignes modal ── */
+      renderLignes() {
+        const tb = $('lignesBody'); if (!tb) return;
+        tb.innerHTML = lignesData.map((l,i) =>
+          '<div class="ligne-row">'
+          +'<input type="text" value="'+utils.esc(l.desc)+'" placeholder="Désignation..." onchange="lignesData['+i+'].desc=this.value;Fact.calcTotaux()">'
+          +'<input type="number" value="'+l.qte+'" min="0" step="0.5" onchange="lignesData['+i+'].qte=parseFloat(this.value)||0;Fact.calcTotaux()" style="text-align:center;">'
+          +'<input type="number" value="'+l.pu+'" min="0" step="0.01" onchange="lignesData['+i+'].pu=parseFloat(this.value)||0;Fact.calcTotaux()">'
+          +'<input type="text" value="'+fmt(l.qte*l.pu)+'" readonly style="color:var(--or);text-align:right;opacity:.8;cursor:default;">'
+          +'<button class="bd2" style="padding:3px 7px;" onclick="Fact.removeLigne('+i+')">✕</button>'
+          +'</div>'
+        ).join('');
+        this.calcTotaux();
+      },
+      addLigne() {
+        const tva = parseFloat($('f-tva')?.value || 10);
+        lignesData.push({desc:'', qte:1, pu:0, tva});
+        this.renderLignes();
+        setTimeout(() => {
+          const rows = $('lignesBody')?.querySelectorAll('.ligne-row');
+          if (rows?.length) rows[rows.length-1].querySelector('input')?.focus();
+        }, 50);
+      },
+      removeLigne(i) { lignesData.splice(i, 1); this.renderLignes(); },
+      calcTotaux() {
+        const tva = parseFloat($('f-tva')?.value || 10);
+        lignesData.forEach(l => l.tva = tva);
+        const ht    = lignesData.reduce((s,l) => s + l.qte*l.pu, 0);
+        const tvaAmt= lignesData.reduce((s,l) => s + l.qte*l.pu*l.tva/100, 0);
+        const th=$('lTotHT'),tv=$('lTotTVA'),tt=$('lTotTTC');
+        if(th)th.textContent=fmt(ht);if(tv)tv.textContent=fmt(tvaAmt);if(tt)tt.textContent=fmt(ht+tvaAmt);
+      },
+      updateLignesTVA() { const tva=parseFloat($('f-tva')?.value||10); lignesData.forEach(l=>l.tva=tva); this.calcTotaux(); },
+      updateModalType() {
+        const type = $('f-type')?.value || 'devis';
+        const sf = $('f-statut'); if(sf) sf.innerHTML = (STATUT_MAP[type]||STATUT_MAP.devis).join('');
+        const rf = $('f-ref');    if(rf) rf.value = genRef(type);
+        const mt = $('mTitle');   if(mt) mt.textContent = ({devis:'Nouveau devis',facture:'Nouvelle facture',avoir:'Nouvel avoir'}[type]||'Nouveau document');
+      },
+
+      _buildChantierSelect(selected='') {
+        const list = chantiersRef.length > 0 ? chantiersRef : [
+          {ref:'VDS-2026-001',client:'M. et Mme Fontaine'},{ref:'VDS-2026-002',client:'M. Bernard Chavot'},
+          {ref:'VDS-2026-003',client:'Mme Claire Aubert'},{ref:'VDS-2026-004',client:'M. et Mme Perrin'},
+          {ref:'VDS-2026-005',client:'M. Jacques Morin'},{ref:'VDS-2026-006',client:'M. et Mme Delorme'},
+          {ref:'VDS-2026-007',client:'M. Arnaud Tessier'},{ref:'VDS-2026-008',client:'M. et Mme Garcia'},
+          {ref:'VDS-2026-009',client:'Mme Sophie Laurent'},{ref:'VDS-2026-010',client:'M. Roger Blanchard'},
+        ];
+        return '<option value="">— Aucun —</option>' + list.map(c =>
+          '<option value="'+c.ref+'"'+(c.ref===selected?' selected':'')+'>'+c.ref+' — '+(c.client||c.titre||'')+'</option>'
+        ).join('');
+      },
+
+      /* ── Modal ── */
+      openModal(defType='devis') {
+        const m = $('factModalOv'); if (!m) return;
+        this._editId = null;
+        $('f-type').value = defType; this.updateModalType();
+        $('f-statut').value = 'brouillon';
+        $('f-date').value = new Date().toISOString().slice(0,10);
+        const fin = new Date(); fin.setDate(fin.getDate()+30);
+        $('f-echeance').value = fin.toISOString().slice(0,10);
+        ['f-objet','f-client','f-tel','f-adresse','f-email','f-notes'].forEach(id => { const el=$(id);if(el)el.value=''; });
+        $('f-tva').value='10'; $('f-acompte').value='30';
+        $('f-chantier').innerHTML = this._buildChantierSelect();
+        ['fv-objet','fv-client'].forEach(id => { const el=$(id);if(el)el.classList.remove('has-err'); });
+        lignesData = [{desc:'', qte:1, pu:0, tva:10}];
+        this.renderLignes();
+        m.style.display = 'flex';
+      },
+      editDoc(id) {
+        const d = docs.find(x => x.id === id); if (!d) return;
+        this._editId = id;
+        $('f-type').value = d.type; this.updateModalType();
+        $('f-statut').value = d.statut;
+        $('f-ref').value = d.ref;
+        $('f-date').value = d.date || '';
+        $('f-echeance').value = d.echeance || '';
+        $('f-objet').value = d.objet;
+        $('f-client').value = d.client;
+        $('f-tel').value = d.tel || '';
+        $('f-adresse').value = d.adresse || '';
+        $('f-email').value = d.email || '';
+        $('f-tva').value = d.lignes[0]?.tva || 10;
+        $('f-acompte').value = d.acompte || 30;
+        $('f-conditions').value = d.conditions || '';
+        $('f-notes').value = d.notes || '';
+        $('f-chantier').innerHTML = this._buildChantierSelect(d.chantier);
+        ['fv-objet','fv-client'].forEach(id => { const el=$(id);if(el)el.classList.remove('has-err'); });
+        lignesData = JSON.parse(JSON.stringify(d.lignes));
+        this.renderLignes();
+        $('factModalOv').style.display = 'flex';
+      },
+      saveDoc() {
+        const objet  = ($('f-objet')?.value||'').trim();
+        const client = ($('f-client')?.value||'').trim();
+        let valid = true;
+        if (!objet)  { $('fv-objet').classList.add('has-err');  valid=false; }
+        if (!client) { $('fv-client').classList.add('has-err'); valid=false; }
+        if (lignesData.every(l => l.pu===0)) { toast.show('Ajoutez au moins une prestation avec un montant','err'); return; }
+        if (!valid) { toast.show('Corrigez les champs obligatoires','err'); return; }
+        const data = {
+          type:$('f-type').value, statut:$('f-statut').value,
+          ref:$('f-ref').value, date:$('f-date').value, echeance:$('f-echeance').value,
+          objet, client, tel:($('f-tel')?.value||''), adresse:($('f-adresse')?.value||''), email:($('f-email')?.value||''),
+          chantier:($('f-chantier')?.value||''),
+          acompte:parseInt($('f-acompte')?.value)||0,
+          conditions:($('f-conditions')?.value||''), notes:($('f-notes')?.value||''),
+          lignes:JSON.parse(JSON.stringify(lignesData)),
+        };
+        const today = new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'});
+        if (this._editId) {
+          Object.assign(docs.find(x=>x.id===this._editId), data);
+          toast.show('Mis à jour ✓', 'ok');
+        } else {
+          data.id = ++nextDocId; data.ref = genRef(data.type);
+          data.historique = [{d:today, t:'b', txt:tlS(data.type).replace(/[📋🧾↩] /,'')+' créé'}];
+          docs.push(data); toast.show(tlS(data.type).replace(/[📋🧾↩] /,'')+' créé ✓', 'ok');
+        }
+        this.closeModal(); persistence.mark(); this.refreshAll();
+      },
+      closeModal() { const m=$('factModalOv');if(m)m.style.display='none'; },
+
+      /* ── Paramètres ── */
+      renderParams() {
+        const fields = [
+          {id:'pp-nom',l:'Raison sociale',v:params.nom},{id:'pp-adresse',l:'Adresse',v:params.adresse},
+          {id:'pp-tel',l:'Téléphone',v:params.tel},{id:'pp-email',l:'Email',v:params.email},
+          {id:'pp-siren',l:'SIREN',v:params.siren},{id:'pp-siret',l:'SIRET',v:params.siret},
+          {id:'pp-tva',l:'TVA intracommunautaire',v:params.tva_intra},{id:'pp-ape',l:'Code APE',v:params.ape},
+          {id:'pp-rge',l:'Certification RGE',v:params.rge},{id:'pp-assurance',l:'Assurance RC Pro',v:params.assurance},
+          {id:'pp-iban',l:'IBAN',v:params.iban},{id:'pp-bic',l:'BIC',v:params.bic},
+        ];
+        const pf = $('paramForm');
+        if (pf) pf.innerHTML = fields.map(f => '<div class="f1"><label class="fl">'+f.l+'</label><input class="fi" id="'+f.id+'" value="'+utils.esc(f.v||'')+'"></div>').join('');
+        const dm = $('defaultMentions'); if(dm) dm.value = mentions;
+        const ds = $('dataStats'); if(ds) ds.innerHTML = docs.length+' document(s) · '+docs.filter(d=>d.statut==='paye').length+' payé(s)';
+      },
+      saveParams() {
+        const g = id => $(id)?.value||'';
+        params = {...params, nom:g('pp-nom'),adresse:g('pp-adresse'),tel:g('pp-tel'),email:g('pp-email'),
+          siren:g('pp-siren'),siret:g('pp-siret'),tva_intra:g('pp-tva'),ape:g('pp-ape'),
+          rge:g('pp-rge'),assurance:g('pp-assurance'),iban:g('pp-iban'),bic:g('pp-bic')};
+        persistence.mark(); persistence.save(false); toast.show('Paramètres enregistrés ✓','ok');
+      },
+      saveMentions() { const dm=$('defaultMentions');if(dm)mentions=dm.value; persistence.mark();persistence.save(false);toast.show('Mentions enregistrées ✓','ok'); },
+      saveConditions() { persistence.mark();persistence.save(false);toast.show('Conditions enregistrées ✓','ok'); },
+      resetParams() { if(!confirm('Réinitialiser les paramètres ?'))return; params={...DEFAULT_PARAMS};this.renderParams();persistence.mark(); },
+
+      /* ── Export/Import ── */
+      exportCSV() {
+        let csv = '\uFEFF';
+        csv += 'Réf,Type,Statut,Date,Échéance,Objet,Client,HT,TVA,TTC,Chantier\n';
+        docs.forEach(d => { const t=totalDoc(d); csv += '"'+d.ref+'","'+tlS(d.type)+'","'+slS(d.statut)+'","'+d.date+'","'+d.echeance+'","'+d.objet+'","'+d.client+'",'+t.ht.toFixed(2)+','+t.tva.toFixed(2)+','+t.ttc.toFixed(2)+',"'+(d.chantier||'')+'"\n'; });
+        const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+        const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='VilarDS_Factu_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+        toast.show('CSV exporté ✓','ok');
+      },
+      handleImport(input) {
+        const file = input.files[0]; if(!file)return;
+        if(!confirm('Importer "'+file.name+'" ?\nLes données actuelles seront remplacées.')){input.value='';return;}
+        const reader = new FileReader();
+        reader.onload = e => { try{const d=JSON.parse(e.target.result);this.applyData(d);persistence.save(false);this.refreshAll();toast.show('Import réussi ✓','ok');}catch{toast.show('Fichier invalide','err');}input.value=''; };
+        reader.readAsText(file);
+      },
+      clearAll() {
+        if(!confirm('Effacer TOUS les documents ? Irréversible !'))return;
+        if(!confirm('Dernière confirmation ?'))return;
+        docs=DEFAULT_DOCS.map(d=>({...d,lignes:[...d.lignes],historique:[...d.historique]}));
+        params={...DEFAULT_PARAMS};mentions=DEFAULT_MENTIONS;nextDocId=100;
+        persistence.save(false);this.refreshAll();toast.show('Données réinitialisées','sv');
+      },
+
+      /* ── Refresh ── */
+      refreshAll() {
+        this.renderDashboard();
+        const av = nav.current;
+        if(av==='devis')     this.renderGrid('devis','devisGrid',curFilter.devis||'tous');
+        if(av==='factures')  this.renderGrid('facture','facturesGrid',curFilter.facture||'tous');
+        if(av==='avoirs')    this.renderGrid('avoir','avoirsGrid','tous');
+        if(av==='impaye')    this.renderImpaye();
+        if(av==='archive')   this.renderGrid('facture','archiveGrid','paye');
+        if(av==='parametres')this.renderParams();
+      },
+
+      _editId: null,
+    };
+
+    /* ════════════════════════════════════════════════════════════════
+       NAVIGATION
+    ════════════════════════════════════════════════════════════════ */
+    nav.register('dashboard',  () => Fact.renderDashboard());
+    nav.register('devis',      () => Fact.renderGrid('devis','devisGrid',curFilter.devis||'tous'));
+    nav.register('factures',   () => Fact.renderGrid('facture','facturesGrid',curFilter.facture||'tous'));
+    nav.register('avoirs',     () => Fact.renderGrid('avoir','avoirsGrid','tous'));
+    nav.register('impaye',     () => Fact.renderImpaye());
+    nav.register('archive',    () => Fact.renderGrid('facture','archiveGrid','paye'));
+    nav.register('parametres', () => Fact.renderParams());
+    nav.register('detail',     () => {});
+
+    /* ════════════════════════════════════════════════════════════════
+       MONTAGE UI
+    ════════════════════════════════════════════════════════════════ */
+    VilarUI.mountModule({
+      sidebar: {
+        moduleName:    'Facturation 2026',
+        moduleVersion: 'v2.0 — IndexedDB + jsPDF',
+        navItems: [
+          { type:'section', label:'Tableau de bord' },
+          { id:'dashboard',  icon:'⊞', label:"Vue d'ensemble" },
+          { type:'section', label:'Documents' },
+          { id:'devis',      icon:'📋', label:'Devis',          pill:0, pillId:'devisPill',    pillClass:'pb' },
+          { id:'factures',   icon:'🧾', label:'Factures',       pill:0, pillId:'facturesPill', pillClass:'por' },
+          { id:'avoirs',     icon:'↩', label:'Avoirs',          pill:0, pillId:'avoirsPill',   pillClass:'pv' },
+          { id:'impaye',     icon:'⚠', label:'Impayés & Relances',pill:0,pillId:'impayePill',  pillClass:'pr' },
+          { id:'archive',    icon:'📁', label:'Archives' },
+          { type:'section', label:'Paramètres' },
+          { id:'parametres', icon:'⚙', label:'Paramètres société' },
+        ],
+        dataActions: [
+          { label:'↓ JSON',    onClick:"VilarCore.io.exportJSON(Fact.getData(),'Facturation')" },
+          { label:'↓ CSV',     onClick:"Fact.exportCSV()" },
+          { label:'↑ Importer', onClick:"document.getElementById('importFile').click()" },
+          { label:'🖨 Imprimer', onClick:'window.print()' },
+        ],
+      },
+      header: {
+        title: 'Facturation',
+        year:  '2026',
+        actions: [
+          { label:'💾',         class:'sec', onClick:"VilarCore.persistence.save(false)" },
+          { label:'+ Devis',                 onClick:"Fact.openModal('devis')" },
+          { label:'+ Facture',               onClick:"Fact.openModal('facture')" },
+        ],
+        avatar: 'JV',
+      },
+      bannerModuleName: 'Facturation',
+    });
+
+    window.Fact = Fact;
+
+    /* ════════════════════════════════════════════════════════════════
+       INITIALISATION
+    ════════════════════════════════════════════════════════════════ */
+    async function initApp() {
+      try {
+        let saved = await db.getModule(MODULE_KEY);
+        if (!saved) {
+          saved = await db.getExternal(LEGACY_DB, LEGACY_STORE, LEGACY_KEY);
+          if (saved) toast.show('Migration Facturation v1 → v2 ✓', 'info', 3000);
+        }
+        if (saved) {
+          Fact.applyData(saved);
+          VilarCore.saveIndicator.update(false, saved.savedAt ?? null);
+          toast.show('Données restaurées ✓', 'ok', 2200);
+        }
+
+        // Lire chantiers partagés (AppBus v2 + fallback)
+        const chSnap = await VilarCore.bus.read('chantiers');
+        const chRaw  = chSnap || await db.getExternal('VilarDS_Chantiers_DB', 'chantierdata', 'chantiers');
+        if (chRaw?.chantiers) chantiersRef = chRaw.chantiers;
+
+        // Lire params partagés depuis Dashboard
+        const dashSnap = await VilarCore.bus.read('dashboard');
+        const dashRaw  = dashSnap || await db.getExternal('VilarDS_DB', 'vilardata', 'dashboard');
+        if (dashRaw?.params) params = {...DEFAULT_PARAMS, ...dashRaw.params, ...params};
+
+      } catch(e) { console.error('[Facturation] Chargement:', e); }
+
+      persistence.init(
+        async () => {
+          const p = {...Fact.getData(), savedAt:new Date().toISOString(), _version:'2.0'};
+          await db.setModule(MODULE_KEY, p);
+          await VilarCore.bus.publish(MODULE_KEY, Fact.getSnapshot());
+        },
+        (isDirty, ls) => VilarCore.saveIndicator.update(isDirty, ls),
+      );
+
+      Fact.renderDashboard();
+      const nd = utils.$('nav-dashboard');
+      if (nd) nd.classList.add('active');
+
+      pwa.register();
+      safeIcons();
+
+      setTimeout(() => {
+        utils.qa('.kpi').forEach((el,i) => {
+          el.style.opacity='0'; el.style.transform='translateY(9px)';
+          setTimeout(()=>{ el.style.transition='all .28s ease'; el.style.opacity='1'; el.style.transform='translateY(0)'; }, i*42+60);
+        });
+      }, 80);
+
+      document.addEventListener('keydown', e => {
+        if ((e.ctrlKey||e.metaKey) && e.key==='s') { e.preventDefault(); persistence.save(false); }
+        if (e.key==='Escape') Fact.closeModal();
+      });
+
+      console.log('%c🧾 VilarDS Facturation v2.0 — PWA + jsPDF Ready', 'color:#C8A84B;font-size:12px;font-weight:bold;');
+    }
+
+    if (document.readyState==='loading') { document.addEventListener('DOMContentLoaded', initApp); }
+    else { initApp(); }
+
+  })();
+  </script>
+</body>
+</html>

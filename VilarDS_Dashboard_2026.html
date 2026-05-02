@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1C2B3A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Vilar DS — Dashboard 2026</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="vilar-core.js"></script>
+  <script src="ui-components.js"></script>
+  <style>
+    .tiles-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:13px; margin-top:4px; }
+    .tile.featured { grid-column:span 2; border-color:rgba(200,168,75,.3); background:linear-gradient(135deg,var(--bg) 60%,rgba(200,168,75,.04)); }
+    .tile.featured h3 { font-size:18px; }
+    .tile p  { font-size:12px; color:var(--af); line-height:1.6; margin-top:4px; }
+    .tile h3 { font-family:'Syne',sans-serif; font-weight:800; font-size:14px; margin-top:6px; }
+    .tile-icon { font-size:26px; }
+    .tile-icon.or  { color:var(--or);  } .tile-icon.bc  { color:var(--bc);  }
+    .tile-icon.vl  { color:var(--vll); } .tile-icon.oj  { color:var(--ojl); }
+    .tile-icon.rs  { color:#A78BFA;    } .tile-icon.cy  { color:#22D3EE;    }
+    .tile-icon.gr  { color:var(--vll); }
+    .table-wrap { overflow-x:auto; }
+    .table-wrap table { width:100%; border-collapse:collapse; font-size:12.5px; }
+    .table-wrap th { font-size:9.5px; text-transform:uppercase; letter-spacing:1px; color:var(--af); padding:9px 10px; text-align:left; font-weight:600; border-bottom:1px solid var(--bd); }
+    .table-wrap td { padding:6px 8px; border-bottom:1px solid rgba(184,200,216,.06); vertical-align:middle; }
+    .table-wrap tr:last-child td { border-bottom:none; }
+    .table-wrap tr.total-row td  { background:rgba(200,168,75,.07); font-weight:700; }
+    .table-wrap td.montant { font-weight:600; font-family:'Syne',sans-serif; color:var(--or); }
+    .table-wrap td input, .table-wrap td select { background:rgba(255,255,255,.05); border:1px solid rgba(184,200,216,.12); border-radius:5px; padding:5px 7px; color:var(--ac); font-size:12px; font-family:'DM Sans',sans-serif; width:100%; min-width:60px; transition:border-color .2s; }
+    .table-wrap td input:focus, .table-wrap td select:focus { border-color:var(--bc); outline:none; }
+    .chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:13px; margin-bottom:13px; }
+    .chart-card { background:var(--bg); border:1px solid var(--bd); border-radius:var(--radius); padding:15px; }
+    .chart-card h4 { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--af); font-weight:600; margin-bottom:12px; }
+    .inter-panel { background:var(--bg); border:1px solid rgba(200,168,75,.2); border-radius:var(--radius); padding:16px; margin-bottom:13px; }
+    .inter-panel h3 { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--or); font-weight:600; margin-bottom:10px; }
+    .inter-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--bd); font-size:12px; }
+    .inter-row:last-child { border-bottom:none; }
+    .inter-label { color:var(--af); }
+    .inter-value { font-weight:700; font-family:'Syne',sans-serif; color:var(--or); }
+    .pos { color:var(--vll); } .neg { color:var(--rll); } .or { color:var(--or); }
+    @media (max-width:900px) { .chart-grid { grid-template-columns:1fr; } .tile.featured { grid-column:span 1; } }
+    @media (max-width:768px) { .tiles-grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div id="sb-mount"></div>
+  <div id="hdr-mount"></div>
+  <div id="banner-mount"></div>
+  <div id="modal-mount"></div>
+  <input type="file" id="importFile" accept=".json" style="display:none" onchange="Dash.handleImport(this)">
+
+  <main id="main" role="main">
+    <!-- HOME -->
+    <div class="view active" id="view-home">
+      <div style="margin-bottom:20px;">
+        <h1 style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;">Bonjour, Julio 👋</h1>
+        <p style="color:var(--af);font-size:12.5px;margin-top:3px;">SARL Vilar DS · Semoy (45400) · Tous corps d'état & RGE · 2026</p>
+      </div>
+      <div class="kg" id="homeKpis"></div>
+      <div class="tiles-grid">
+        <div class="tile featured" onclick="VilarCore.nav.go('compta')" role="button" tabindex="0">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div class="tile-icon or">📊</div>
+            <span class="sbadge s-or">⭐ PRIORITÉ</span>
+          </div>
+          <h3>Comptabilité 2026</h3>
+          <p>Suivi ventes, achats, charges fixes, TVA, bénéfice. Tableaux interactifs, graphiques mensuels, export CSV/PDF.</p>
+          <div style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;">
+            <span class="sbadge s-vl">● En production</span>
+            <span style="font-size:12px;color:var(--or);font-weight:600;">Ouvrir →</span>
+          </div>
+        </div>
+        <div class="tile" onclick="Dash.openModule('chantiers')" role="button" tabindex="0">
+          <div class="tile-icon bc">🏗</div><h3>Chantiers & Projets</h3>
+          <p>Suivi chantiers, photos terrain, alertes intelligentes, planning équipes.</p>
+          <span class="sbadge s-vl">● En production</span>
+        </div>
+        <div class="tile" onclick="Dash.openModule('facturation')" role="button" tabindex="0">
+          <div class="tile-icon vl">🧾</div><h3>Facturation</h3>
+          <p>Devis et factures PDF professionnels, suivi impayés, relances clients.</p>
+          <span class="sbadge s-vl">● En production</span>
+        </div>
+        <div class="tile" onclick="Dash.openModule('rh')" role="button" tabindex="0">
+          <div class="tile-icon rs">👷</div><h3>RH & Équipe</h3>
+          <p>Fiches salariés, congés, plannings, heures par chantier.</p>
+          <span class="sbadge s-vl">● En production</span>
+        </div>
+        <div class="tile" onclick="Dash.openModule('docs')" role="button" tabindex="0">
+          <div class="tile-icon cy">📁</div><h3>Documents & RGE</h3>
+          <p>Certifications RGE, assurance, KBIS, archivage réglementaire.</p>
+          <span class="sbadge s-vl">● En production</span>
+        </div>
+        <div class="tile" onclick="Dash.openModule('analytics')" role="button" tabindex="0">
+          <div class="tile-icon gr">📈</div><h3>Analytics & Rapports</h3>
+          <p>KPIs consolidés, graphiques, rapports mensuels et bilan annuel.</p>
+          <span class="sbadge s-vl">● En production</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPTABILITÉ -->
+    <div class="view" id="view-compta">
+      <div class="sh">
+        <div>
+          <h1 style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;">Comptabilité <span style="color:var(--or);">2026</span></h1>
+          <p style="color:var(--af);font-size:12px;">SARL Vilar DS · Exercice 2026 · RGE</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="bou" onclick="Dash.exportComptaCSV()">↓ CSV</button>
+          <button class="bo" onclick="window.print()">🖨 PDF</button>
+        </div>
+      </div>
+      <div class="kg" id="kpiGrid"></div>
+      <div class="tabs" role="tablist">
+        <button class="tab active" onclick="Dash.switchTab('synthese')">📊 Synthèse</button>
+        <button class="tab" onclick="Dash.switchTab('ventes')">💰 Ventes</button>
+        <button class="tab" onclick="Dash.switchTab('achats')">🛒 Achats</button>
+        <button class="tab" onclick="Dash.switchTab('charges')">🔧 Charges</button>
+        <button class="tab" onclick="Dash.switchTab('mensuel')">📅 Mensuel</button>
+        <button class="tab" onclick="Dash.switchTab('tva')">🧾 TVA</button>
+      </div>
+      <div class="tc active" id="tc-synthese">
+        <div class="chart-grid">
+          <div class="chart-card"><h4>Évolution mensuelle — Ventes & Résultat (€ HT)</h4><canvas id="chartVB" height="200"></canvas></div>
+          <div class="chart-card"><h4>Répartition charges fixes</h4><canvas id="chartCH" height="200"></canvas></div>
+        </div>
+        <div class="chart-card" style="margin-bottom:16px;"><h4>Progression CA 2026</h4><div id="progressSection"></div></div>
+        <div class="chart-card"><h4>Balance mensuelle</h4><canvas id="chartBal" height="140"></canvas></div>
+      </div>
+      <div class="tc" id="tc-ventes">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:9px;">
+          <span class="st">Saisie des Ventes</span><button class="bo" onclick="Dash.addVente()">+ Nouvelle vente</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Mois</th><th>Description</th><th>HT (€)</th><th>TVA</th><th>TVA (€)</th><th>TTC (€)</th><th></th></tr></thead>
+          <tbody id="ventesTbody"></tbody>
+          <tfoot><tr class="total-row"><td colspan="2"><strong>TOTAL</strong></td>
+            <td class="montant or" id="totVentesHT">0,00 €</td><td></td>
+            <td class="montant or" id="totVentesTVA">0,00 €</td>
+            <td class="montant or" id="totVentesTTC">0,00 €</td><td></td>
+          </tr></tfoot>
+        </table></div>
+      </div>
+      <div class="tc" id="tc-achats">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:9px;">
+          <span class="st">Saisie des Achats</span><button class="bo" onclick="Dash.addAchat()">+ Nouvel achat</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Mois</th><th>Description</th><th>HT (€)</th><th>TVA</th><th>TVA (€)</th><th>TTC (€)</th><th></th></tr></thead>
+          <tbody id="achatsTbody"></tbody>
+          <tfoot><tr class="total-row"><td colspan="2"><strong>TOTAL</strong></td>
+            <td class="montant or" id="totAchatsHT">0,00 €</td><td></td>
+            <td class="montant or" id="totAchatsTVA">0,00 €</td>
+            <td class="montant or" id="totAchatsTTC">0,00 €</td><td></td>
+          </tr></tfoot>
+        </table></div>
+      </div>
+      <div class="tc" id="tc-charges">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:9px;">
+          <span class="st">Charges Fixes</span><button class="bo" onclick="Dash.addCharge()">+ Nouvelle charge</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Catégorie</th><th>Description</th><th>Mensuel HT (€)</th><th>TVA</th><th>Annuel HT (€)</th><th></th></tr></thead>
+          <tbody id="chargesTbody"></tbody>
+          <tfoot><tr class="total-row"><td colspan="2"><strong>TOTAL ANNUEL</strong></td>
+            <td class="montant or" id="totChargesMens">0,00 €</td><td></td>
+            <td class="montant or" id="totChargesAnn">0,00 €</td><td></td>
+          </tr></tfoot>
+        </table></div>
+      </div>
+      <div class="tc" id="tc-mensuel">
+        <span class="st" style="display:block;margin-bottom:14px;">Récapitulatif Mensuel</span>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Mois</th><th>Ventes HT</th><th>Achats HT</th><th>Charges HT</th><th>Résultat HT</th><th>TVA coll.</th><th>TVA déd.</th><th>TVA nette</th></tr></thead>
+          <tbody id="mensuelTbody"></tbody>
+        </table></div>
+      </div>
+      <div class="tc" id="tc-tva">
+        <span class="st" style="display:block;margin-bottom:14px;">Calcul TVA 2026</span>
+        <div class="kg" id="tvaKpis"></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Mois</th><th>TVA Collectée</th><th>TVA Déd. achats</th><th>TVA Déd. charges</th><th>Nette à payer</th><th>Statut</th></tr></thead>
+          <tbody id="tvaTbody"></tbody>
+        </table></div>
+        <div style="padding:12px;background:rgba(74,123,168,.08);border:1px solid rgba(74,123,168,.2);border-radius:9px;font-size:12px;color:var(--bc);margin-top:8px;">
+          ℹ Régime TVA réel simplifié — Déclarations trimestrielles CA12. Consultez votre expert-comptable.
+        </div>
+      </div>
+    </div>
+
+    <!-- INTERCONNEXION -->
+    <div class="view" id="view-interconnexion">
+      <div style="margin-bottom:18px;">
+        <h1 style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;">🔗 Vue Consolidée</h1>
+        <p style="color:var(--af);font-size:12.5px;margin-top:2px;">Données partagées entre tous les modules — AppBus v2.0</p>
+      </div>
+      <div class="kg" id="interKpis"></div>
+      <div class="inter-panel">
+        <h3>📊 Données comptabilité</h3>
+        <div class="inter-row"><span class="inter-label">Ventes HT</span><span class="inter-value" id="i-ventesHT">—</span></div>
+        <div class="inter-row"><span class="inter-label">Achats HT</span><span class="inter-value" id="i-achatsHT">—</span></div>
+        <div class="inter-row"><span class="inter-label">Charges annuelles HT</span><span class="inter-value" id="i-chargesHT">—</span></div>
+        <div class="inter-row"><span class="inter-label">Résultat net HT</span><span class="inter-value" id="i-resultat">—</span></div>
+        <div class="inter-row"><span class="inter-label">TVA nette à reverser</span><span class="inter-value" id="i-tvanette">—</span></div>
+      </div>
+      <div class="dual">
+        <div class="sec" style="margin-bottom:0;"><h3>🏗 Données Chantiers</h3><div id="interChantiers"><div class="empty">Ouvrez le module Chantiers.</div></div></div>
+        <div class="sec" style="margin-bottom:0;"><h3>🧾 Données Facturation</h3><div id="interFacturation"><div class="empty">Ouvrez le module Facturation.</div></div></div>
+      </div>
+      <div class="sec">
+        <h3>⚡ Actions rapides</h3>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="bo"  onclick="Dash.importDepensesChantiers()">↓ Importer dépenses chantiers</button>
+          <button class="bou" onclick="Dash.syncSharedData()">🔄 Synchroniser</button>
+          <button class="bg2" onclick="Dash.exportAll()">↓ Export JSON global</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PARAMÈTRES -->
+    <div class="view" id="view-parametres">
+      <div style="margin-bottom:18px;">
+        <h1 style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;">⚙ Paramètres Société</h1>
+        <p style="color:var(--af);font-size:12.5px;margin-top:2px;">Partagés avec tous les modules</p>
+      </div>
+      <div class="sec">
+        <h3>Informations légales</h3>
+        <div id="paramForm"></div>
+        <div style="margin-top:14px;display:flex;gap:8px;">
+          <button class="bo" onclick="Dash.saveParams()">💾 Enregistrer</button>
+          <button class="bg2" onclick="Dash.resetParams()">↺ Réinitialiser</button>
+        </div>
+      </div>
+      <div class="sec">
+        <h3>Mentions légales par défaut</h3>
+        <textarea class="fi fi-area" id="defaultMentions" style="width:100%;min-height:90px;"></textarea>
+        <div style="margin-top:10px;"><button class="bo" onclick="Dash.saveMentions()">💾 Enregistrer mentions</button></div>
+      </div>
+      <div class="sec">
+        <h3>Conditions de paiement</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">
+          <div class="f1"><label class="fl">Délai paiement (j)</label><input class="fi" id="p-delai" type="number" value="30"></div>
+          <div class="f1"><label class="fl">Validité devis (j)</label><input class="fi" id="p-validite" type="number" value="30"></div>
+          <div class="f1"><label class="fl">TVA défaut</label><select class="fi" id="p-tva"><option>20</option><option selected>10</option><option>5.5</option></select></div>
+          <div class="f1"><label class="fl">Objectif CA annuel (€)</label><input class="fi" id="p-objectif" type="number" value="180000"></div>
+        </div>
+        <div style="margin-top:12px;"><button class="bo" onclick="Dash.saveConditions()">💾 Enregistrer</button></div>
+      </div>
+      <div class="sec">
+        <h3>Gestion des données</h3>
+        <div style="display:flex;gap:9px;flex-wrap:wrap;">
+          <button class="bo"  onclick="Dash.exportAll()">↓ Exporter JSON</button>
+          <button class="bou" onclick="document.getElementById('importFile').click()">↑ Importer JSON</button>
+          <button class="bd2" onclick="Dash.clearAllData()">🗑 Effacer tout</button>
+        </div>
+        <div id="dataStats" style="margin-top:12px;font-size:12px;color:var(--af);"></div>
+      </div>
+    </div>
+  </main>
+  <script>
+  (function () {
+    'use strict';
+
+    const { db, bus, persistence, toast, nav, io, utils, safeIcons, pwa, MOIS, MA } = VilarCore;
+    const $ = utils.$;
+
+    const fmt    = n => Number(n||0).toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:0}) + ' €';
+    const fmtN   = n => Number(n||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    const calcTVA = (ht,tx) => (ht||0)*(tx||0)/100;
+    const calcTTC = (ht,tx) => (ht||0)+calcTVA(ht,tx);
+    const tvaOpts = sel => [20,10,5.5,0].map(t=>`<option value="${t}" ${t==sel?'selected':''}>${t}%</option>`).join('');
+    const moisOpts = sel => MOIS.map(m=>`<option ${m===sel?'selected':''}>${m}</option>`).join('');
+
+    const DEFAULT_PARAMS = {
+      nom:'SARL Vilar DS',adresse:'Semoy (45400), Loiret',tel:'06 XX XX XX XX',email:'vilards@gmail.com',
+      siren:'495 126 344',siret:'495 126 344 00014',tva_intra:'FR XX 495126344',ape:'4120A',
+      rge:'RGE QualiSol N° XXXXXX',assurance:'AXA Pro — Police N° XXXXXX',
+      iban:'FR76 XXXX XXXX XXXX XXXX XXXX XXX',bic:'XXXXXXXX',objectif:180000,
+    };
+    const DEFAULT_MENTIONS = 'Pénalités de retard : 3× le taux légal. Indemnité forfaitaire 40€. TVA réduite art.279-0 bis CGI. Garantie décennale souscrite.';
+    const DEFAULT_VENTES = [
+      {id:1,mois:'Janvier',desc:'Maçonnerie — Extension Semoy',ht:8500,tva:10},
+      {id:2,mois:'Janvier',desc:'Ravalement façade Orléans',ht:3200,tva:10},
+      {id:3,mois:'Février',desc:'Gros œuvre — Dalle Saint-Jean-de-Braye',ht:12400,tva:20},
+      {id:4,mois:'Février',desc:'Isolation thermique RGE — Chécy',ht:6800,tva:10},
+      {id:5,mois:'Mars',desc:'Construction mur + portail',ht:4100,tva:20},
+      {id:6,mois:'Mars',desc:'Rénovation salle de bain — Mardié',ht:7200,tva:10},
+    ];
+    const DEFAULT_ACHATS = [
+      {id:1,mois:'Janvier',desc:'Ciment, sable, gravier',ht:1840,tva:20},
+      {id:2,mois:'Janvier',desc:'Location toupie béton',ht:620,tva:20},
+      {id:3,mois:'Février',desc:'Matériaux gros œuvre',ht:3100,tva:20},
+      {id:4,mois:'Février',desc:'Isolants laine de roche RGE',ht:2200,tva:5.5},
+      {id:5,mois:'Mars',desc:'Ferraillage + treillis soudé',ht:1450,tva:20},
+      {id:6,mois:'Mars',desc:'Carrelage + colle + joint',ht:2800,tva:20},
+    ];
+    const DEFAULT_CHARGES = [
+      {id:1,cat:'Assurance',desc:'RC Pro + chantier',mensuel:320,tva:0},
+      {id:2,cat:'Véhicule',desc:'Leasing Ford Transit',mensuel:680,tva:20},
+      {id:3,cat:'Véhicule',desc:'Carburant + entretien',mensuel:450,tva:20},
+      {id:4,cat:'Télécom',desc:'Téléphone Pro + Fibre',mensuel:85,tva:20},
+      {id:5,cat:'Logiciels',desc:'Suite bureautique',mensuel:60,tva:20},
+      {id:6,cat:'Comptabilité',desc:'Expert-comptable',mensuel:350,tva:20},
+      {id:7,cat:'Cotisations',desc:'FFB Loiret',mensuel:95,tva:0},
+      {id:8,cat:'Local',desc:'Loyer dépôt matériel',mensuel:500,tva:20},
+      {id:9,cat:'Outillage',desc:'Amortissement',mensuel:200,tva:20},
+      {id:10,cat:'Divers',desc:'Frais bancaires',mensuel:75,tva:0},
+      {id:11,cat:'Communication',desc:'Google Ads + site web',mensuel:150,tva:20},
+      {id:12,cat:'EPI',desc:'Sécurité + EPI',mensuel:80,tva:20},
+    ];
+
+    let ventes   = DEFAULT_VENTES.map(x=>({...x}));
+    let achats   = DEFAULT_ACHATS.map(x=>({...x}));
+    let charges  = DEFAULT_CHARGES.map(x=>({...x}));
+    let params   = {...DEFAULT_PARAMS};
+    let mentions = DEFAULT_MENTIONS;
+    let nextId   = 100;
+    let sharedData = {chantiers:null,facturation:null};
+
+    const _charts = {};
+    function mkChart(id,cfg){if(_charts[id]){_charts[id].destroy();delete _charts[id];}const el=$(id);if(!el)return;_charts[id]=new Chart(el,cfg);}
+
+    const Calc = {
+      ventesHT:    () => ventes.reduce((s,v)=>s+(v.ht||0),0),
+      ventesTVA:   () => ventes.reduce((s,v)=>s+calcTVA(v.ht,v.tva),0),
+      achatsHT:    () => achats.reduce((s,a)=>s+(a.ht||0),0),
+      achatsTVA:   () => achats.reduce((s,a)=>s+calcTVA(a.ht,a.tva),0),
+      chargesMens: () => charges.reduce((s,c)=>s+(c.mensuel||0),0),
+      chargesAnn:  () => charges.reduce((s,c)=>s+(c.mensuel||0)*12,0),
+      chargesTVA:  () => charges.reduce((s,c)=>s+calcTVA((c.mensuel||0)*12,c.tva),0),
+      resultatHT:  function(){return this.ventesHT()-this.achatsHT()-this.chargesAnn();},
+      marge:       function(){return this.ventesHT()>0?Math.round(this.resultatHT()/this.ventesHT()*100):0;},
+      tvaNette:    function(){return this.ventesTVA()-this.achatsTVA()-this.chargesTVA();},
+    };
+
+    const App = {
+      getData() { return {ventes,achats,charges,params,mentions,sharedData,nextId}; },
+      applyData(s) {
+        if(s.ventes)    ventes  =s.ventes;
+        if(s.achats)    achats  =s.achats;
+        if(s.charges)   charges =s.charges;
+        if(s.params)    params  ={...DEFAULT_PARAMS,...s.params};
+        if(s.mentions)  mentions=s.mentions;
+        if(s.sharedData)sharedData=s.sharedData;
+        if(s.nextId)    nextId  =s.nextId;
+      },
+      getSnapshot() {
+        return {ventes,achats,charges,totalsHT:{ventes:Calc.ventesHT(),achats:Calc.achatsHT(),charges:Calc.chargesAnn()},resultatHT:Calc.resultatHT(),tvaNette:Calc.tvaNette(),params};
+      },
+      validateImport: d => d&&(Array.isArray(d.ventes)||Array.isArray(d.achats)),
+    };
+
+    function renderKPIs() {
+      const vHT=Calc.ventesHT(),aHT=Calc.achatsHT(),cAnn=Calc.chargesAnn(),res=Calc.resultatHT(),tva=Calc.tvaNette(),marge=Calc.marge();
+      const kpiHtml=[
+        {l:'Ventes HT',  v:fmt(vHT), s:'Exercice 2026',          c:'co'},
+        {l:'Achats HT',  v:fmt(aHT), s:'Matériaux & ST',          c:'cb'},
+        {l:'Charges/An', v:fmt(cAnn),s:fmt(Calc.chargesMens())+'/mois', c:'col'},
+        {l:'Résultat HT',v:fmt(res), s:'Ventes − Achats − Charges',c:res>=0?'cv':'cr'},
+        {l:'TVA nette',  v:fmt(Math.max(0,tva)),s:'À reverser',   c:'cj'},
+        {l:'Marge brute',v:marge+'%',s:'Sur CA',                  c:marge>=15?'cv':'cr'},
+      ].map(k=>`<div class="kpi ${k.c}"><div class="kl">${k.l}</div><div class="kv">${k.v}</div><div class="ks">${k.s}</div></div>`).join('');
+      const kg=$('kpiGrid');    if(kg)    kg.innerHTML=kpiHtml;
+      const hkg=$('homeKpis'); if(hkg)   hkg.innerHTML=kpiHtml;
+      const set=(id,v)=>{const el=$(id);if(el)el.textContent=fmtN(v)+' €';};
+      set('totVentesHT',Calc.ventesHT());set('totVentesTVA',Calc.ventesTVA());set('totVentesTTC',Calc.ventesHT()+Calc.ventesTVA());
+      set('totAchatsHT',Calc.achatsHT());set('totAchatsTVA',Calc.achatsTVA());set('totAchatsTTC',Calc.achatsHT()+Calc.achatsTVA());
+      set('totChargesMens',Calc.chargesMens());set('totChargesAnn',Calc.chargesAnn());
+      const ds=$('dataStats');if(ds)ds.textContent=`${ventes.length} ventes · ${achats.length} achats · ${charges.length} charges`;
+      const tvaKEl=$('tvaKpis');
+      if(tvaKEl)tvaKEl.innerHTML=[
+        {l:'TVA collectée',v:fmt(Calc.ventesTVA()),c:'co'},
+        {l:'TVA déductible',v:fmt(Calc.achatsTVA()+Calc.chargesTVA()),c:'cb'},
+        {l:'TVA nette',v:fmt(Math.max(0,tva)),c:tva>0?'cj':'cv'},
+      ].map(k=>`<div class="kpi ${k.c}"><div class="kl">${k.l}</div><div class="kv">${k.v}</div></div>`).join('');
+    }
+
+    function renderCharts() {
+      const mv=new Array(12).fill(0),ma=new Array(12).fill(0);
+      ventes.forEach(v=>{const i=MOIS.indexOf(v.mois);if(i>=0)mv[i]+=v.ht||0;});
+      achats.forEach(a=>{const i=MOIS.indexOf(a.mois);if(i>=0)ma[i]+=a.ht||0;});
+      const cm=Calc.chargesMens(),mr=mv.map((v,i)=>v-ma[i]-cm);
+      const ai=mv.reduce((a,v,i)=>v>0?[...a,i]:a,[]);
+      const idxs=ai.length>0?ai:[0,1,2,3,4,5];
+      const labels=idxs.map(i=>MA[i]);
+      const bo={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#B8C8D8',font:{size:11},boxWidth:12}}},scales:{x:{ticks:{color:'#7A8FA6',font:{size:11}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#7A8FA6',font:{size:11},callback:v=>(v/1000).toFixed(0)+'k€'},grid:{color:'rgba(255,255,255,.06)'}}}};
+      mkChart('chartVB',{type:'bar',data:{labels,datasets:[
+        {label:'Ventes HT',data:idxs.map(i=>mv[i]),backgroundColor:'rgba(200,168,75,.7)',borderRadius:4},
+        {label:'Résultat HT',data:idxs.map(i=>mr[i]),type:'line',borderColor:'#4ADE80',backgroundColor:'rgba(74,222,128,.06)',borderWidth:2,tension:.4,fill:true,pointRadius:3},
+      ]},options:bo});
+      const cats={};charges.forEach(c=>{cats[c.cat]=(cats[c.cat]||0)+(c.mensuel||0)*12;});
+      const pal=['#C8A84B','#4A7BA8','#1A6B3A','#8B1A1A','#C05C1A','#7A8FA6','#4ADE80','#F87171','#FB923C','#A78BFA'];
+      mkChart('chartCH',{type:'doughnut',data:{labels:Object.keys(cats),datasets:[{data:Object.values(cats),backgroundColor:pal,borderColor:'#162436',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#B8C8D8',font:{size:10},boxWidth:11}}},cutout:'55%'}});
+      mkChart('chartBal',{type:'bar',data:{labels,datasets:[
+        {label:'Ventes HT',data:idxs.map(i=>mv[i]),backgroundColor:'rgba(74,222,128,.5)',borderRadius:3},
+        {label:'Charges totales',data:idxs.map(i=>ma[i]+cm),backgroundColor:'rgba(248,113,113,.4)',borderRadius:3},
+      ]},options:bo});
+      const pEl=$('progressSection');
+      if(pEl){const pct=Math.min(100,Math.round(Calc.ventesHT()/(params.objectif||180000)*100));pEl.innerHTML=`<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span style="color:var(--af);">CA actuel : <strong style="color:var(--or);">${fmt(Calc.ventesHT())}</strong></span><span style="color:var(--af);">Objectif : <strong style="color:var(--bc);">${fmt(params.objectif||180000)}</strong></span></div><div class="prog-track" style="height:12px;border-radius:6px;"><div class="prog-fill pf-or" style="width:${pct}%;border-radius:6px;"></div></div><div style="text-align:center;margin-top:5px;font-size:11px;color:var(--or);font-weight:700;">${pct}% atteint</div>`;}
+    }
+
+    function renderVentes() {
+      const tb=$('ventesTbody');if(!tb)return;
+      tb.innerHTML=ventes.map(v=>`<tr>
+        <td><select onchange="Dash.updateV(${v.id},'mois',this.value)">${moisOpts(v.mois)}</select></td>
+        <td><input type="text" value="${utils.esc(v.desc||'')}" onchange="Dash.updateV(${v.id},'desc',this.value)"></td>
+        <td><input type="number" value="${v.ht||0}" min="0" step="0.01" onchange="Dash.updateV(${v.id},'ht',+this.value)"></td>
+        <td><select onchange="Dash.updateV(${v.id},'tva',+this.value)">${tvaOpts(v.tva)}</select></td>
+        <td class="montant">${fmtN(calcTVA(v.ht,v.tva))}</td>
+        <td class="montant">${fmtN(calcTTC(v.ht,v.tva))}</td>
+        <td><button class="bd2" onclick="Dash.deleteV(${v.id})">✕</button></td>
+      </tr>`).join('');
+    }
+    function renderAchats() {
+      const tb=$('achatsTbody');if(!tb)return;
+      tb.innerHTML=achats.map(a=>`<tr>
+        <td><select onchange="Dash.updateA(${a.id},'mois',this.value)">${moisOpts(a.mois)}</select></td>
+        <td><input type="text" value="${utils.esc(a.desc||'')}" onchange="Dash.updateA(${a.id},'desc',this.value)"></td>
+        <td><input type="number" value="${a.ht||0}" min="0" step="0.01" onchange="Dash.updateA(${a.id},'ht',+this.value)"></td>
+        <td><select onchange="Dash.updateA(${a.id},'tva',+this.value)">${tvaOpts(a.tva)}</select></td>
+        <td class="montant">${fmtN(calcTVA(a.ht,a.tva))}</td>
+        <td class="montant">${fmtN(calcTTC(a.ht,a.tva))}</td>
+        <td><button class="bd2" onclick="Dash.deleteA(${a.id})">✕</button></td>
+      </tr>`).join('');
+    }
+    function renderCharges() {
+      const tb=$('chargesTbody');if(!tb)return;
+      tb.innerHTML=charges.map(c=>`<tr>
+        <td><input type="text" value="${utils.esc(c.cat||'')}" onchange="Dash.updateC(${c.id},'cat',this.value)"></td>
+        <td><input type="text" value="${utils.esc(c.desc||'')}" onchange="Dash.updateC(${c.id},'desc',this.value)"></td>
+        <td><input type="number" value="${c.mensuel||0}" min="0" step="0.01" onchange="Dash.updateC(${c.id},'mensuel',+this.value)"></td>
+        <td><select onchange="Dash.updateC(${c.id},'tva',+this.value)">${tvaOpts(c.tva)}</select></td>
+        <td class="montant">${fmtN((c.mensuel||0)*12)}</td>
+        <td><button class="bd2" onclick="Dash.deleteC(${c.id})">✕</button></td>
+      </tr>`).join('');
+    }
+    function renderMensuel() {
+      const tb=$('mensuelTbody');if(!tb)return;
+      const cm=Calc.chargesMens();
+      let rows='';
+      MOIS.forEach(m=>{
+        const vM=ventes.filter(v=>v.mois===m).reduce((s,v)=>s+(v.ht||0),0);
+        const aM=achats.filter(a=>a.mois===m).reduce((s,a)=>s+(a.ht||0),0);
+        const rM=vM-aM-cm;
+        const tvcM=ventes.filter(v=>v.mois===m).reduce((s,v)=>s+calcTVA(v.ht,v.tva),0);
+        const tvdAM=achats.filter(a=>a.mois===m).reduce((s,a)=>s+calcTVA(a.ht,a.tva),0);
+        const tvdCM=charges.reduce((s,c)=>s+calcTVA(c.mensuel||0,c.tva),0);
+        const tvnM=tvcM-tvdAM-tvdCM;
+        const has=vM>0||aM>0;
+        rows+=`<tr ${!has?'style="opacity:.4;"':''}><td style="font-weight:${has?600:400};">${m}</td>
+          <td class="montant ${vM>0?'or':''}">${fmtN(vM)} €</td><td class="montant">${fmtN(aM)} €</td>
+          <td class="montant">${fmtN(cm)} €</td><td class="montant ${rM>=0?'pos':'neg'}">${fmtN(rM)} €</td>
+          <td class="montant">${fmtN(tvcM)} €</td><td class="montant">${fmtN(tvdAM+tvdCM)} €</td>
+          <td class="montant ${tvnM>=0?'or':'neg'}">${fmtN(Math.max(0,tvnM))} €</td></tr>`;
+      });
+      rows+=`<tr class="total-row"><td><strong>TOTAL</strong></td>
+        <td class="montant or">${fmtN(Calc.ventesHT())} €</td><td class="montant">${fmtN(Calc.achatsHT())} €</td>
+        <td class="montant">${fmtN(Calc.chargesAnn())} €</td>
+        <td class="montant ${Calc.resultatHT()>=0?'pos':'neg'}">${fmtN(Calc.resultatHT())} €</td>
+        <td class="montant">${fmtN(Calc.ventesTVA())} €</td><td class="montant">${fmtN(Calc.achatsTVA()+Calc.chargesTVA())} €</td>
+        <td class="montant ${Calc.tvaNette()>=0?'or':'neg'}">${fmtN(Calc.tvaNette())} €</td></tr>`;
+      tb.innerHTML=rows;
+    }
+    function renderTVA() {
+      const tb=$('tvaTbody');if(!tb)return;
+      const cm=charges.reduce((s,c)=>s+calcTVA(c.mensuel||0,c.tva),0);
+      tb.innerHTML=MOIS.map(m=>{
+        const tvc=ventes.filter(v=>v.mois===m).reduce((s,v)=>s+calcTVA(v.ht,v.tva),0);
+        const tvda=achats.filter(a=>a.mois===m).reduce((s,a)=>s+calcTVA(a.ht,a.tva),0);
+        const tvn=tvc-tvda-cm;
+        const has=ventes.some(v=>v.mois===m)||achats.some(a=>a.mois===m);
+        const stat=!has?`<span style="color:var(--af);font-size:10px;">—</span>`:tvn>0?`<span class="sbadge s-jn">À payer</span>`:`<span class="sbadge s-vl">Crédit</span>`;
+        return `<tr ${!has?'style="opacity:.4;"':''}><td style="font-weight:${has?600:400};">${m}</td>
+          <td class="montant">${fmtN(tvc)} €</td><td class="montant">${fmtN(tvda)} €</td>
+          <td class="montant">${fmtN(cm)} €</td>
+          <td class="montant ${tvn>0?'or':tvn<0?'pos':''}">${fmtN(Math.max(0,tvn))} €</td>
+          <td>${stat}</td></tr>`;
+      }).join('');
+    }
+    function renderParams() {
+      const fields=[
+        {id:'pp-nom',l:'Raison sociale',v:params.nom},{id:'pp-adresse',l:'Adresse',v:params.adresse},
+        {id:'pp-tel',l:'Téléphone',v:params.tel},{id:'pp-email',l:'Email',v:params.email},
+        {id:'pp-siren',l:'SIREN',v:params.siren},{id:'pp-siret',l:'SIRET',v:params.siret},
+        {id:'pp-tva',l:'TVA intra',v:params.tva_intra},{id:'pp-ape',l:'Code APE',v:params.ape},
+        {id:'pp-rge',l:'Certification RGE',v:params.rge},{id:'pp-assurance',l:'Assurance RC Pro',v:params.assurance},
+        {id:'pp-iban',l:'IBAN',v:params.iban},{id:'pp-bic',l:'BIC',v:params.bic},
+      ];
+      const pEl=$('paramForm');
+      if(pEl)pEl.innerHTML=`<div class="fg">${fields.map(f=>`<div class="f1"><label class="fl">${f.l}</label><input class="fi" id="${f.id}" type="text" value="${utils.esc(f.v||'')}"></div>`).join('')}</div>`;
+      const dm=$('defaultMentions');if(dm)dm.value=mentions;
+    }
+
+    async function syncSharedData() {
+      try {
+        const snaps=await bus.readAll(['chantiers','facturation']);
+        const raw_ch=snaps.chantiers||await db.getExternal('VilarDS_Chantiers_DB','chantierdata','chantiers');
+        const raw_fa=snaps.facturation||await db.getExternal('VilarDS_Fact_DB','factdata','facturation');
+        if(raw_ch)sharedData.chantiers=raw_ch;
+        if(raw_fa)sharedData.facturation=raw_fa;
+        updateInterconnexion();
+        persistence.mark();
+        toast.show('Synchronisation réussie ✓','ok');
+      } catch(e){toast.show('Erreur de synchronisation','err');}
+    }
+
+    function updateInterconnexion() {
+      const ch=sharedData.chantiers||{};
+      const fa=sharedData.facturation||{};
+      const fmtI=n=>Number(n||0).toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:0})+' €';
+      const set=(id,v)=>{const el=$(id);if(el)el.textContent=v;};
+      set('i-ventesHT', fmtI(Calc.ventesHT()));
+      set('i-achatsHT', fmtI(Calc.achatsHT()));
+      set('i-chargesHT',fmtI(Calc.chargesAnn()));
+      set('i-resultat', fmtI(Calc.resultatHT()));
+      set('i-tvanette', fmtI(Math.max(0,Calc.tvaNette())));
+      const iKEl=$('interKpis');
+      if(iKEl)iKEl.innerHTML=[
+        {l:'CA comptabilité',  v:fmtI(Calc.ventesHT()),c:'co'},
+        {l:'Budget chantiers', v:fmtI((ch.chantiers||[]).reduce((s,c)=>s+c.budget,0)),c:'cb'},
+        {l:'CA facturé TTC',   v:fmtI((fa.docs||[]).filter(d=>d.type==='facture').reduce((s,d)=>s+d.ttc,0)),c:'cj'},
+        {l:'Résultat net HT',  v:fmtI(Calc.resultatHT()),c:Calc.resultatHT()>=0?'cv':'cr'},
+      ].map(k=>`<div class="kpi ${k.c}"><div class="kl">${k.l}</div><div class="kv">${k.v}</div></div>`).join('');
+      const chEl=$('interChantiers');
+      if(chEl){const chs=ch.chantiers||[];chEl.innerHTML=chs.length===0?'<div class="empty">Aucune donnée chantier.</div>':`<table class="htab"><thead><tr><th>Réf.</th><th>Client</th><th>Budget HT</th><th>Avancement</th></tr></thead><tbody>${chs.slice(0,6).map(c=>`<tr><td style="font-weight:600;font-size:11px;">${c.ref||'—'}</td><td>${c.client||'—'}</td><td class="montant">${fmtI(c.budget)}</td><td><div style="display:flex;align-items:center;gap:6px;"><div class="prog-track" style="width:70px;"><div class="prog-fill pf-or" style="width:${c.avanc||0}%"></div></div><span style="font-size:11px;color:var(--or);">${c.avanc||0}%</span></div></td></tr>`).join('')}</tbody></table>`;}
+      const faEl=$('interFacturation');
+      if(faEl){const docs=fa.docs||[];faEl.innerHTML=docs.length===0?'<div class="empty">Aucune donnée facturation.</div>':`<table class="htab"><thead><tr><th>Réf.</th><th>Client</th><th>Montant TTC</th><th>Statut</th></tr></thead><tbody>${docs.slice(0,6).map(d=>`<tr><td style="font-weight:600;font-size:11px;">${d.ref||'—'}</td><td>${d.client||'—'}</td><td class="montant">${fmtI(d.ttc)}</td><td><span class="sbadge ${d.statut==='paye'?'s-vl':d.statut==='retard'?'s-rl':'s-or'}">${d.statut}</span></td></tr>`).join('')}</tbody></table>`;}
+    }
+
+    const Dash = {
+      updateV(id,f,v){const i=ventes.find(x=>x.id===id);if(i){i[f]=v;persistence.mark();renderKPIs();renderVentes();}},
+      deleteV(id){if(!confirm('Supprimer cette vente ?'))return;ventes=ventes.filter(x=>x.id!==id);persistence.mark();refreshAll();},
+      addVente(){ventes.push({id:++nextId,mois:'Janvier',desc:'Nouvelle vente',ht:0,tva:10});persistence.mark();this.switchTab('ventes');renderVentes();renderKPIs();},
+      updateA(id,f,v){const i=achats.find(x=>x.id===id);if(i){i[f]=v;persistence.mark();renderKPIs();renderAchats();}},
+      deleteA(id){if(!confirm('Supprimer cet achat ?'))return;achats=achats.filter(x=>x.id!==id);persistence.mark();refreshAll();},
+      addAchat(){achats.push({id:++nextId,mois:'Janvier',desc:'Nouvel achat',ht:0,tva:20});persistence.mark();this.switchTab('achats');renderAchats();renderKPIs();},
+      updateC(id,f,v){const i=charges.find(x=>x.id===id);if(i){i[f]=v;persistence.mark();renderKPIs();renderCharges();}},
+      deleteC(id){if(!confirm('Supprimer cette charge ?'))return;charges=charges.filter(x=>x.id!==id);persistence.mark();refreshAll();},
+      addCharge(){charges.push({id:++nextId,cat:'Divers',desc:'Nouvelle charge',mensuel:0,tva:20});persistence.mark();this.switchTab('charges');renderCharges();renderKPIs();},
+      saveParams(){const g=id=>$(id)?.value||'';params={...params,nom:g('pp-nom'),adresse:g('pp-adresse'),tel:g('pp-tel'),email:g('pp-email'),siren:g('pp-siren'),siret:g('pp-siret'),tva_intra:g('pp-tva'),ape:g('pp-ape'),rge:g('pp-rge'),assurance:g('pp-assurance'),iban:g('pp-iban'),bic:g('pp-bic')};persistence.mark();persistence.save(false);toast.show('Paramètres enregistrés ✓','ok');},
+      saveMentions(){const el=$('defaultMentions');if(el)mentions=el.value;persistence.mark();persistence.save(false);toast.show('Mentions enregistrées ✓','ok');},
+      saveConditions(){params.objectif=parseInt($('p-objectif')?.value)||180000;persistence.mark();persistence.save(false);toast.show('Conditions enregistrées ✓','ok');},
+      resetParams(){if(!confirm('Réinitialiser les paramètres ?'))return;params={...DEFAULT_PARAMS};renderParams();persistence.mark();toast.show('Paramètres réinitialisés','sv');},
+      switchTab(name){
+        document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+        document.querySelectorAll('.tc').forEach(c=>c.classList.remove('active'));
+        const el=$('tc-'+name);if(el)el.classList.add('active');
+        const TABS=['synthese','ventes','achats','charges','mensuel','tva'];
+        const idx=TABS.indexOf(name);
+        const tabs=document.querySelectorAll('.tab');
+        if(idx>=0&&tabs[idx])tabs[idx].classList.add('active');
+        if(name==='synthese')setTimeout(renderCharts,50);
+        if(name==='mensuel')renderMensuel();
+        if(name==='tva')renderTVA();
+      },
+      openModule(name){
+        const files={chantiers:'VilarDS_Chantiers_2026.html',facturation:'VilarDS_Facturation_2026.html',docs:'VilarDS_DocsRGE_2026.html',analytics:'VilarDS_Analytics_2026.html',rh:'VilarDS_RH_2026.html'};
+        if(files[name])window.open(files[name],'_blank');
+        else toast.show(`${name} — bientôt disponible`,'info');
+      },
+      exportAll(){io.exportJSON(App.getData(),'Dashboard');},
+      exportComptaCSV(){
+        let csv='\uFEFF=== VILAR DS — COMPTABILITE 2026 ===\n\nVENTES\nMois,Description,HT,TVA%,TVA€,TTC\n';
+        ventes.forEach(v=>csv+=`"${v.mois}","${v.desc}",${v.ht},${v.tva},${fmtN(calcTVA(v.ht,v.tva))},${fmtN(calcTTC(v.ht,v.tva))}\n`);
+        csv+=`TOTAL,,${fmtN(Calc.ventesHT())},,${fmtN(Calc.ventesTVA())},${fmtN(Calc.ventesHT()+Calc.ventesTVA())}\n\nACHATS\nMois,Description,HT,TVA%,TVA€,TTC\n`;
+        achats.forEach(a=>csv+=`"${a.mois}","${a.desc}",${a.ht},${a.tva},${fmtN(calcTVA(a.ht,a.tva))},${fmtN(calcTTC(a.ht,a.tva))}\n`);
+        csv+=`TOTAL,,${fmtN(Calc.achatsHT())},,${fmtN(Calc.achatsTVA())},${fmtN(Calc.achatsHT()+Calc.achatsTVA())}\n\nCHARGES\nCategorie,Description,Mensuel HT,TVA%,Annuel HT\n`;
+        charges.forEach(c=>csv+=`"${c.cat}","${c.desc}",${c.mensuel},${c.tva},${(c.mensuel||0)*12}\n`);
+        const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+        const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`VilarDS_Compta_${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(a.href);
+        toast.show('Export CSV ✓','ok');
+      },
+      handleImport(input){
+        const file=input.files[0];if(!file)return;
+        io.triggerImport(data=>{App.applyData(data);persistence.mark();refreshAll();toast.show('Import réussi ✓','ok');},App.validateImport);
+        input.value='';
+      },
+      clearAllData(){
+        if(!confirm('Effacer TOUTES les données ?'))return;
+        if(!confirm('Confirmation définitive ?'))return;
+        ventes=DEFAULT_VENTES.map(x=>({...x}));achats=DEFAULT_ACHATS.map(x=>({...x}));
+        charges=DEFAULT_CHARGES.map(x=>({...x}));params={...DEFAULT_PARAMS};mentions=DEFAULT_MENTIONS;nextId=100;
+        persistence.save(false);refreshAll();toast.show('Données réinitialisées','info');
+      },
+      importDepensesChantiers(){
+        const ch=sharedData.chantiers;
+        if(!ch?.chantiers?.length){toast.show("Aucune donnée chantier. Synchronisez d'abord.",'info');return;}
+        let imported=0;
+        ch.chantiers.forEach(c=>{if(c.depenses?.length){c.depenses.forEach(d=>{const exists=achats.some(a=>a.ht===d.mont);if(!exists){achats.push({id:++nextId,mois:MOIS[new Date().getMonth()],desc:`${c.ref||c.client} — ${d.desc||'Dépense'}`,ht:d.mont||0,tva:20});imported++;}});}});
+        if(imported>0){persistence.mark();refreshAll();toast.show(`${imported} dépense(s) importée(s) ✓`,'ok');}
+        else toast.show('Aucune nouvelle dépense','info');
+      },
+      syncSharedData,
+    };
+
+    function refreshAll(){
+      renderKPIs();renderVentes();renderAchats();renderCharges();renderParams();updateInterconnexion();
+      const atc=document.querySelector('.tc.active');
+      if(atc){const id=atc.id.replace('tc-','');if(id==='synthese')setTimeout(renderCharts,50);if(id==='mensuel')renderMensuel();if(id==='tva')renderTVA();}
+    }
+
+    nav.register('home',           ()=>renderKPIs());
+    nav.register('compta',         ()=>{renderKPIs();renderVentes();renderAchats();renderCharges();setTimeout(renderCharts,80);});
+    nav.register('interconnexion', ()=>updateInterconnexion());
+    nav.register('parametres',     ()=>renderParams());
+
+    VilarUI.mountModule({
+      sidebar:{
+        moduleName:'Dashboard 2026',moduleVersion:'v2.0 — IndexedDB + PWA',
+        navItems:[
+          {type:'section',label:'Navigation'},
+          {id:'home',icon:'⊞',label:'Hub modules'},
+          {id:'compta',icon:'📊',label:'Comptabilité 2026'},
+          {id:'interconnexion',icon:'🔗',label:'Vue consolidée'},
+          {id:'parametres',icon:'⚙',label:'Paramètres société'},
+        ],
+        dataActions:[
+          {label:'↓ CSV',onClick:"Dash.exportComptaCSV()"},
+          {label:'↓ JSON',onClick:"Dash.exportAll()"},
+          {label:'↑ Importer',onClick:"document.getElementById('importFile').click()"},
+          {label:'🖨 Imprimer',onClick:'window.print()'},
+        ],
+      },
+      header:{
+        title:'Dashboard',year:'2026',
+        actions:[
+          {label:'💾',class:'sec',onClick:"VilarCore.persistence.save(false)"},
+          {label:'🔄 Sync',class:'sec',onClick:"Dash.syncSharedData()"},
+          {label:'+ Vente',onClick:"VilarCore.nav.go('compta');Dash.addVente()"},
+        ],
+        avatar:'JV',
+      },
+      bannerModuleName:'Dashboard',
+    });
+
+    window.Dash = Dash;
+
+    async function initApp(){
+      try{
+        let saved=await db.getModule('dashboard');
+        if(!saved)saved=await db.getExternal('VilarDS_DB','vilardata','dashboard');
+        if(saved){App.applyData(saved);VilarCore.saveIndicator.update(false,saved.savedAt??null);toast.show('Données restaurées ✓','ok',2000);}
+      }catch(e){console.error('[Dashboard] Chargement:',e);}
+      persistence.init(
+        async()=>{const p={...App.getData(),savedAt:new Date().toISOString(),_version:'2.0'};await db.setModule('dashboard',p);await bus.publish('dashboard',App.getSnapshot());},
+        (isDirty,ls)=>VilarCore.saveIndicator.update(isDirty,ls),
+      );
+      refreshAll();
+      setTimeout(syncSharedData,1500);
+      pwa.register();safeIcons();
+      setTimeout(()=>{document.querySelectorAll('.kpi,.tile').forEach((el,i)=>{el.style.opacity='0';el.style.transform='translateY(10px)';setTimeout(()=>{el.style.transition='all .3s ease';el.style.opacity='1';el.style.transform='translateY(0)';},i*40+80);});},100);
+      console.log('%c📊 VilarDS Dashboard v2.0 — PWA Ready','color:#C8A84B;font-size:12px;font-weight:bold;');
+    }
+    if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initApp);}else{initApp();}
+  })();
+  </script>
+</body>
+</html>

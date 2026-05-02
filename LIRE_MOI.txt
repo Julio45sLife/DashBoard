@@ -1,0 +1,31 @@
+SUITE NUMÉRIQUE VILAR DS — v4.0
+================================
+SARL Vilar DS · SIREN 495 126 344 · Semoy (45400)
+
+FICHIERS
+---------
+vilar-core.js                   Noyau partagé (DB, Bus, Toast, Nav, IO)
+ui-components.js                Design system (CSS, Sidebar, Header)
+
+VilarDS_Dashboard_2026.html     Hub + Comptabilité 2026
+VilarDS_Chantiers_2026.html     Gestion chantiers + Photos + Gantt
+VilarDS_Facturation_2026.html   Devis + Factures + jsPDF
+VilarDS_RH_2026.html            RH + Sous-traitants + Planning
+VilarDS_DocsRGE_2026.html       Documents réglementaires + Alertes
+VilarDS_Analytics_2026.html     Rapports + Graphiques Chart.js
+VilarDS_CRM_2026.html           CRM Clients (NOUVEAU v4.0)
+
+VilarDS_Tutoriel_v4.pdf         Tutoriel complet v4.0 (ce document)
+
+DÉMARRAGE
+----------
+1. Ouvrir VilarDS_Dashboard_2026.html dans Chrome, Firefox ou Safari
+2. Tous les fichiers doivent être dans le MÊME dossier
+3. Ctrl+S = sauvegarde manuelle | Auto-save : 8 secondes
+
+SAUVEGARDE
+-----------
+Données stockées localement (IndexedDB). Faites des exports JSON
+réguliers via Sidebar → ↓ JSON dans chaque module.
+
+SIREN : 495 126 344 | v4.0 | © 2026 SARL Vilar DS
