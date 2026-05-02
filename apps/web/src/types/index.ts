@@ -42,6 +42,7 @@ export interface ContactDetail extends Contact {
   country: string;
   siren?: string;
   vatNumber?: string;
+  website?: string;
   notes?: string;
   interactions: Interaction[];
   invoices: InvoiceSummary[];
