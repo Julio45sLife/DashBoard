@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.yarn/cache
+.yarn/unplugged
+
+# Build outputs
+dist/
+.next/
+out/
+build/
+*.tsbuildinfo
+apps/web/next-env.d.ts
+
+# Environment files (NEVER commit real .env)
+.env
+.env.local
+.env.production
+.env.staging
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Prisma generated
+apps/api/src/database/generated/
+
+# Docker volumes data
+.docker-data/
