@@ -12,6 +12,8 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { StrictValidationPipe } from './common/pipes/zod-validation.pipe';
+import { MetricsInterceptor } from './modules/metrics/metrics.interceptor';
+import { MetricsService } from './modules/metrics/metrics.service';
 
 async function bootstrap() {
   const logger = WinstonModule.createLogger({
@@ -37,7 +39,10 @@ async function bootstrap() {
     ],
   });
 
-  const app = await NestFactory.create(AppModule, { logger });
+  const app = await NestFactory.create(AppModule, {
+    logger,
+    rawBody: true, // required for Stripe webhook signature verification
+  });
 
   const config = app.get(ConfigService);
   const reflector = app.get(Reflector);
@@ -57,7 +62,12 @@ async function bootstrap() {
   app.useGlobalPipes(new StrictValidationPipe());
   app.useGlobalFilters(new AllExceptionsFilter());
   app.useGlobalGuards(new JwtAuthGuard(reflector), new RolesGuard(reflector));
-  app.useGlobalInterceptors(new LoggingInterceptor(), new TransformInterceptor());
+  const metricsService = app.get(MetricsService);
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(),
+    new MetricsInterceptor(metricsService),
+    new TransformInterceptor(),
+  );
 
   // ── API prefix ───────────────────────────────────────────────────────────────
   app.setGlobalPrefix('api/v1', { exclude: ['/health', '/metrics'] });

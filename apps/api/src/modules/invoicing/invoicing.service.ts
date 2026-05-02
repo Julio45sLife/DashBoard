@@ -167,7 +167,7 @@ export class InvoicingService {
       throw new BadRequestException('Only DRAFT invoices can be edited');
     }
 
-    const tenant = await this.tenantsService.getSettings(tenantId);
+    await this.tenantsService.getSettings(tenantId);
     const lineItems = dto.lineItems;
 
     const data: Record<string, unknown> = {
@@ -224,7 +224,7 @@ export class InvoicingService {
   async recordPayment(tenantId: string, invoiceId: string, dto: RecordPaymentDto) {
     const invoice = await this.findOne(tenantId, invoiceId);
 
-    if (![InvoiceStatus.SENT, InvoiceStatus.OVERDUE].includes(invoice.status)) {
+    if (!([InvoiceStatus.SENT, InvoiceStatus.OVERDUE] as InvoiceStatus[]).includes(invoice.status)) {
       throw new BadRequestException('Invoice must be SENT or OVERDUE to record payment');
     }
 

@@ -75,7 +75,7 @@ export class UsersService {
   }
 
   async create(tenantId: string, dto: CreateUserDto, createdByRole: UserRole) {
-    if (!this.canManageRole(createdByRole, dto.role)) {
+    if (!this.canManageRole(createdByRole, dto.role ?? UserRole.READONLY)) {
       throw new ForbiddenException(`Cannot create user with role ${dto.role}`);
     }
 

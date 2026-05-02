@@ -17,6 +17,9 @@ import { InvoicingModule } from './modules/invoicing/invoicing.module';
 import { HrModule } from './modules/hr/hr.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { HealthModule } from './modules/health/health.module';
+import { QueueModule } from './queue/queue.module';
+import { MetricsModule } from './modules/metrics/metrics.module';
+import { AuditModule } from './modules/audit/audit.module';
 
 @Module({
   imports: [
@@ -72,6 +75,9 @@ import { HealthModule } from './modules/health/health.module';
     HrModule,
     DashboardModule,
     HealthModule,
+    QueueModule,
+    MetricsModule,
+    AuditModule,
   ],
 })
 export class AppModule implements NestModule {

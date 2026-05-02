@@ -23,7 +23,7 @@ export const authService = {
 
   async fetchMe(): Promise<void> {
     const { data } = await apiClient.get<ApiResponse<{ id: string; email: string; firstName: string; lastName: string; role: string; tenant: { id: string; slug: string; plan: string } }>>('/users/me');
-    useAuthStore.getState().setUser(data.data as Parameters<typeof useAuthStore.getState>['0']['user']);
+    useAuthStore.getState().setUser(data.data as import('../store/auth.store').AuthUser);
   },
 
   logout(): void {

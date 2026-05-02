@@ -19,7 +19,7 @@ import { JwtPayload } from '../../common/decorators/user.decorator';
 import { GoogleProfile } from './strategies/google.strategy';
 import { LoginDto, RegisterDto, ResetPasswordDto } from './dto/auth.dto';
 
-interface TokenPair {
+export interface TokenPair {
   accessToken: string;
   refreshToken: string;
 }

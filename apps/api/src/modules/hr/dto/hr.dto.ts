@@ -1,5 +1,5 @@
 import {
-  IsBoolean, IsDateString, IsEnum, IsNumber, IsOptional,
+  IsDateString, IsEnum, IsNumber, IsOptional,
   IsString, MaxLength, Min, IsArray,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
